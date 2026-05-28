@@ -17,5 +17,10 @@ const userSchema = new mongoose.Schema({
   tokenVersion: { type: Number, default: 0 },
 }, { timestamps: true });
 
+// 🔥 SCALING INDEXES
+userSchema.index({ role: 1 });
+userSchema.index({ telegramId: 1 }, { sparse: true });
+userSchema.index({ 'subscription.isActive': 1, 'subscription.plan': 1 });
+
 const User = mongoose.model('User', userSchema);
 export default User;

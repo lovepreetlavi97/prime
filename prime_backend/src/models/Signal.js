@@ -51,6 +51,8 @@ const signalSchema = new mongoose.Schema({
 signalSchema.index({ status: 1, createdAt: -1 });
 signalSchema.index({ telegramMessageId: 1 }); // Fast lookup for threaded updates
 signalSchema.index({ symbol: 1, strike: 1, optionType: 1, status: 1 }); // Duplicate check index
+signalSchema.index({ source: 1, createdAt: -1 }); // Admin feed filtering by source
+signalSchema.index({ createdAt: -1 }); // General time-sorted listing
 
 const Signal = mongoose.model('Signal', signalSchema);
 export default Signal;

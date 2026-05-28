@@ -3,6 +3,16 @@ import signalsRepository from './signals.repository.js';
 import socketService from '../../loaders/socket.js';
 import { parseSignal } from '../../services/parser.service.js';
 import { updateCachedSignal } from '../../services/priceTracker.service.js';
+import { invalidateCachePattern } from '../../middlewares/cacheMiddleware.js';
+
+async function invalidateSignalsCache() {
+  try {
+    await Promise.all([
+      invalidateCachePattern('*signals*'),
+      invalidateCachePattern('*stats*')
+    ]);
+  } catch (err) {}
+}
 
 class SignalsService {
   async getAllSignals(todayOnly = false, status = null) {
@@ -41,6 +51,7 @@ class SignalsService {
         });
 
         socketService.emitGlobal('update_signal', updated);
+        await invalidateSignalsCache();
         return updated;
       }
 
@@ -67,6 +78,7 @@ class SignalsService {
 
     updateCachedSignal(saved);
     socketService.emitGlobal('new_signal', saved);
+    await invalidateSignalsCache();
     return saved;
   }
 
@@ -128,6 +140,11 @@ class SignalsService {
     // Also emit globally for the history feed
     socketService.emitGlobal('price_update', updated);
 
+    // Invalidate REST cache only if status has changed
+    if (updateData.status) {
+      await invalidateSignalsCache();
+    }
+
     try {
       const otherActive = await Signal.find({
         _id: { $ne: id },
@@ -152,6 +169,7 @@ class SignalsService {
   async closeSignal(id, status = 'CLOSED') {
     const updated = await signalsRepository.update(id, { status, statusChangedAt: Date.now() });
     socketService.emitGlobal('signal_closed', updated);
+    await invalidateSignalsCache();
     return updated;
   }
 
@@ -166,6 +184,7 @@ class SignalsService {
     const updated = await signalsRepository.update(id, { sl: stopLoss });
     updateCachedSignal(updated);
     socketService.emitGlobal('update_signal', updated);
+    await invalidateSignalsCache();
     return updated;
   }
 
@@ -173,6 +192,7 @@ class SignalsService {
     const updated = await signalsRepository.update(id, { guidance });
     updateCachedSignal(updated);
     socketService.emitGlobal('update_signal', updated);
+    await invalidateSignalsCache();
     return updated;
   }
 
@@ -180,6 +200,7 @@ class SignalsService {
     const updated = await signalsRepository.update(id, { confidenceScore: score, rating });
     updateCachedSignal(updated);
     socketService.emitGlobal('update_signal', updated);
+    await invalidateSignalsCache();
     return updated;
   }
 
@@ -189,6 +210,7 @@ class SignalsService {
     });
     updateCachedSignal(updated);
     socketService.emitGlobal('update_signal', updated);
+    await invalidateSignalsCache();
     return updated;
   }
 
@@ -201,12 +223,15 @@ class SignalsService {
       updates: [data.entry]
     });
     socketService.emitGlobal('new_signal', saved);
+    await invalidateSignalsCache();
     return saved;
   }
 
 
   async deleteSignal(id) {
-    return await signalsRepository.delete(id);
+    const deleted = await signalsRepository.delete(id);
+    await invalidateSignalsCache();
+    return deleted;
   }
 
   async getOverallStats() {

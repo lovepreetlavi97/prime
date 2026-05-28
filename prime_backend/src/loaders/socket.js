@@ -17,7 +17,7 @@ class SocketService {
     this._isInitialized = false;
   }
 
-  async init(server) {
+  async init(server, app = null) {
     if (this._isInitialized) return this.io;
 
     this.io = new SocketServer(server, {
@@ -32,19 +32,45 @@ class SocketService {
       pingInterval: 10000
     });
 
+    // 🛡️ JWT Socket Authentication Middleware
+    this.io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+        if (!token) {
+          socket.handshake.auth.userId = null;
+          socket.handshake.auth.tier = 'free';
+          socket.handshake.auth.device = socket.handshake.headers['user-agent'] || 'unknown';
+          return next();
+        }
+
+        if (app && app.jwt) {
+          const decoded = app.jwt.verify(token);
+          socket.handshake.auth.userId = decoded.id || decoded.userId;
+          socket.handshake.auth.tier = decoded.tier || decoded.subscriptionType || 'free';
+          socket.handshake.auth.device = decoded.device || socket.handshake.headers['user-agent'] || 'unknown';
+        }
+        next();
+      } catch (err) {
+        logger.warn(`⚠️ [SocketAuth] Auth failed for socket ${socket.id}: ${err.message}`);
+        socket.handshake.auth.userId = null;
+        socket.handshake.auth.tier = 'free';
+        socket.handshake.auth.device = socket.handshake.headers['user-agent'] || 'unknown';
+        next();
+      }
+    });
+
     // Initialize the New Gateway in Shadow Mode (Parallel Validation)
     gateway.init(this.io);
 
     this.io.on('connection', async (socket) => {
-
-      const { userId, tier = 'free' } = socket.handshake.auth;
-      logger.info(`🔗 Client connected: ${socket.id} (User: ${userId || 'Guest'}, Tier: ${tier})`);
+      const { userId, tier = 'free', device = 'unknown' } = socket.handshake.auth;
+      logger.info(`🔗 Client connected: ${socket.id} (User: ${userId || 'Guest'}, Tier: ${tier}, Device: ${device})`);
 
       // Default room for all users
       socket.join('signals:free');
 
       if (userId) {
-        await presenceService.setUserOnline(userId, socket.id);
+        await presenceService.setUserOnline(userId, socket.id, device, tier);
         socket.join(`user:${userId}`);
         
         // Subscription Tier Routing
@@ -64,6 +90,11 @@ class SocketService {
           socket.join(`market:${symbol}`);
           logger.debug(`📡 Socket ${socket.id} joined market:${symbol}`);
         }
+      });
+
+      // Heartbeat ACK to refresh activity
+      socket.on('heartbeat_ack', async () => {
+        await presenceService.updateSocketActivity(socket.id);
       });
 
       socket.on('disconnect', async () => {
@@ -93,13 +124,10 @@ class SocketService {
       }
     }, 15000); // 15s TG Status Update
 
-    // 🔥 UNIFIED GLOBAL BROADCASTER (Legacy - Decommissioned for RealtimeGateway)
-    /*
-    sub.subscribe('GLOBAL_REALTIME_EVENTS');
-    sub.on('message', (channel, message) => {
-      // ... handled by gateway.js
-    });
-    */
+    // 🔥 STALE SOCKETS CLEANUP INTERVAl (30 seconds)
+    setInterval(async () => {
+      await presenceService.cleanupStaleSockets();
+    }, 30000);
 
     this._isInitialized = true;
     logger.info('🚀 Optimized Realtime Gateway Established');
@@ -107,11 +135,44 @@ class SocketService {
   }
 
   /**
-   * Cross-process emit helper
+   * Cross-process emit helper (Intelligent Redis Channel Mapping)
    */
   async emitGlobal(event, data, room = null) {
     const payload = pack({ event, data, room });
-    await pub.publish('GLOBAL_REALTIME_EVENTS', payload);
+    let channel = 'GLOBAL_REALTIME_EVENTS';
+
+    // Map events to specific Redis channels to avoid single-instance bottlenecks
+    if (event === 'new_signal') {
+      channel = 'signal:new';
+    } else if (event === 'update_signal') {
+      channel = 'signal:update';
+    } else if (event === 'signal_closed' || event === 'signal_status_change') {
+      const status = data.status || '';
+      if (status === 'SL_HIT') {
+        channel = 'signal:sl-hit';
+      } else if (['TARGET_HIT', 'PROFIT', 'CLOSED_PROFIT'].includes(status)) {
+        channel = 'signal:target-hit';
+      } else {
+        channel = 'signal:update';
+      }
+    } else if (event === 'price_update') {
+      const symbol = data.instrument || data.symbol || null;
+      if (symbol === 'NIFTY 50' || symbol === 'NIFTY') {
+        channel = 'market:nifty';
+      } else if (symbol === 'BANKNIFTY') {
+        channel = 'market:banknifty';
+      } else {
+        channel = room ? `market:${data.token || data.symbol || 'option'}` : 'GLOBAL_REALTIME_EVENTS';
+      }
+    } else if (event === 'notification_broadcast') {
+      channel = 'notification:broadcast';
+    } else if (event === 'notification_pro') {
+      channel = 'notification:pro';
+    } else if (event === 'notification_free') {
+      channel = 'notification:free';
+    }
+
+    await pub.publish(channel, payload);
   }
 
   getIO() { return this.io; }

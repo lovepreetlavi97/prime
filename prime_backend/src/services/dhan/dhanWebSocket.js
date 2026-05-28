@@ -85,8 +85,27 @@ class DhanWebSocket {
   }
 
   handleReconnect() {
+    // ⚡ Skip reconnect if credentials are clearly mock/missing
+    const isMockCredentials = (
+      !process.env.DHAN_ACCESS_TOKEN &&
+      !process.env.TOTP_SECRET
+    ) || process.env.DHAN_CLIENT_ID === 'mock_client_id';
+
+    if (isMockCredentials) {
+      logger.warn('⚠️ [DhanFeed] Mock credentials detected. Halting reconnect attempts to prevent 429 storm.');
+      return;
+    }
+
     this.retryCount++;
-    const backoff = Math.min(1000 * Math.pow(2, this.retryCount), 60000);
+
+    if (this.retryCount > 10) {
+      logger.error('❌ [DhanFeed] Max reconnect attempts (10) reached. Giving up.');
+      return;
+    }
+
+    // Exponential backoff: 2s, 4s, 8s ... capped at 120s
+    const backoff = Math.min(2000 * Math.pow(2, this.retryCount - 1), 120000);
+    logger.info(`🔁 [DhanFeed] Reconnect attempt ${this.retryCount}/10 in ${backoff / 1000}s...`);
     setTimeout(() => this.connect(), backoff);
   }
 

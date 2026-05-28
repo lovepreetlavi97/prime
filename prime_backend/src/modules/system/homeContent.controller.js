@@ -1,4 +1,5 @@
 import HomeContent from '../../models/HomeContent.js';
+import { invalidateCachePattern } from '../../middlewares/cacheMiddleware.js';
 
 export const getHomeContent = async (req, reply) => {
   try {
@@ -19,6 +20,7 @@ export const updateHomeContent = async (req, reply) => {
       req.body,
       { upsert: true, new: true, runValidators: true }
     );
+    await invalidateCachePattern('*home-content*');
     return { success: true, data: content };
   } catch (err) {
     throw err;
@@ -71,6 +73,7 @@ export const seedHomeContent = async (req, reply) => {
       return reply.code(400).send({ error: 'Content already seeded' });
     }
     const seeded = await HomeContent.create(defaultData);
+    await invalidateCachePattern('*home-content*');
     return { success: true, message: 'Default content seeded successfully', data: seeded };
   } catch (err) {
     throw err;

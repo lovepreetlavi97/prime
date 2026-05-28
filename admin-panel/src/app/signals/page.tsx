@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAdminStore } from '../../store/useAdminStore';
 import { 
   Plus, Radio, Trash2, ShieldAlert, Sparkles, CheckCircle2, 
-  XCircle, Ban, TrendingUp, AlertTriangle
+  XCircle, Ban, TrendingUp, AlertTriangle, Cpu, Target, ShieldX, Eye
 } from 'lucide-react';
 import { GlassCard } from '../../components/GlassCard';
 
@@ -13,7 +14,7 @@ export default function SignalsPage() {
     signals, fetchSignals, createSignal, closeSignal, deleteSignal, setActiveTab
   } = useAdminStore();
 
-  const [activeTab, setActiveTabLocal] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  const [activeFilter, setActiveFilter] = useState<'ACTIVE' | 'TARGET_HIT' | 'SL_HIT' | 'CANCELLED' | 'HISTORY'>('ACTIVE');
   
   // Signal form fields state
   const [symbol, setSymbol] = useState('NIFTY');
@@ -25,6 +26,7 @@ export default function SignalsPage() {
   const [aiRationale, setAiRationale] = useState('');
   const [confidence, setConfidence] = useState('85');
   const [rating, setRating] = useState('STRONG');
+  const [trend, setTrend] = useState('BULLISH');
 
   useEffect(() => {
     setActiveTab('signals');
@@ -32,7 +34,7 @@ export default function SignalsPage() {
 
   useEffect(() => {
     fetchSignals();
-    const interval = setInterval(fetchSignals, 5000); // Poll signals updates
+    const interval = setInterval(fetchSignals, 5000);
     return () => clearInterval(interval);
   }, [fetchSignals]);
 
@@ -57,6 +59,7 @@ export default function SignalsPage() {
       aiRationale: aiRationale || 'AI volume support at support cluster',
       confidenceScore: parseInt(confidence) || 85,
       rating,
+      trend,
       source: 'ADMIN-MANUAL',
       status: 'ACTIVE' as const,
       updates: [parseFloat(entry)],
@@ -73,131 +76,200 @@ export default function SignalsPage() {
     setAiRationale('');
   };
 
+  // Filter logic
   const filteredSignals = signals.filter(s => {
-    const isClosed = s.status.startsWith('CLOSED') || ['SL_HIT', 'EXIT_ALERT', 'TARGET_HIT', 'PROFIT'].includes(s.status);
-    return activeTab === 'ACTIVE' ? !isClosed : isClosed;
+    if (activeFilter === 'ACTIVE') {
+      return s.status === 'ACTIVE';
+    }
+    if (activeFilter === 'TARGET_HIT') {
+      return s.status === 'TARGET_HIT';
+    }
+    if (activeFilter === 'SL_HIT') {
+      return s.status === 'SL_HIT';
+    }
+    if (activeFilter === 'CANCELLED') {
+      return s.status === 'CANCELLED';
+    }
+    // History fallback: anything not ACTIVE
+    return s.status !== 'ACTIVE';
   });
 
   return (
-    <div className="space-y-6 select-none">
-      <div className="space-y-1">
-        <h2 className="text-3xl font-black text-white uppercase italic tracking-tight">
-          OPTION <span className="text-[#D4AF37]">SIGNALS</span>
-        </h2>
-        <p className="text-[10px] font-black text-[#71717A] uppercase tracking-[4px]">
-          Live Options Signals Generation & Settlement Terminal
-        </p>
+    <div className="space-y-8 select-none">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+            <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[3px]">REALTIME BROADCAST CONSOLE</span>
+          </div>
+          <h2 className="text-3xl font-black text-white uppercase italic tracking-tight leading-none">
+            OPTION <span className="text-[#D4AF37]">SIGNALS</span>
+          </h2>
+          <p className="text-[10px] font-black text-[#5A5E70] uppercase tracking-[4px]">
+            Live Options Trading Signals Generation & Settlement Terminal
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Signals Monitor */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="flex justify-between items-center">
-            {/* Active vs Past tabs */}
-            <div className="flex gap-2.5">
-              {(['ACTIVE', 'HISTORY'] as const).map(tab => (
+          
+          {/* Signal Filters */}
+          <div className="flex flex-wrap gap-2">
+            {(['ACTIVE', 'TARGET_HIT', 'SL_HIT', 'CANCELLED', 'HISTORY'] as const).map(filter => {
+              const count = signals.filter(s => {
+                if (filter === 'ACTIVE') return s.status === 'ACTIVE';
+                if (filter === 'TARGET_HIT') return s.status === 'TARGET_HIT';
+                if (filter === 'SL_HIT') return s.status === 'SL_HIT';
+                if (filter === 'CANCELLED') return s.status === 'CANCELLED';
+                return s.status !== 'ACTIVE';
+              }).length;
+
+              return (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTabLocal(tab)}
-                  className={`px-5 h-10 rounded-xl text-[9px] font-black tracking-[1.5px] uppercase border transition-all duration-300 ${
-                    activeTab === tab 
-                      ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.25)]' 
-                      : 'bg-[#0A0D18] border-white/5 text-[#71717A] hover:text-white hover:bg-white/[0.01]'
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`px-4 h-10 rounded-xl text-[9px] font-black tracking-[1.5px] uppercase border transition-all duration-300 flex items-center gap-2 cursor-pointer ${
+                    activeFilter === filter 
+                      ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' 
+                      : 'bg-[#0A0D18] border-white/5 text-[#5A5E70] hover:text-white hover:bg-white/[0.01]'
                   }`}
                 >
-                  {tab === 'ACTIVE' ? 'Live Alert Feeds' : 'Settled Archive'}
+                  <span>{filter.replace('_', ' ')}</span>
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${activeFilter === filter ? 'bg-black/20 text-black' : 'bg-white/5 text-[#A1A1AA]'}`}>
+                    {count}
+                  </span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
+          {/* List display with Framer Motion */}
           <div className="space-y-4">
-            {filteredSignals.length > 0 ? (
-              filteredSignals.map((sig) => {
-                const isNifty = sig.symbol === 'NIFTY';
-                const isClosed = sig.status.startsWith('CLOSED') || ['SL_HIT', 'EXIT_ALERT', 'TARGET_HIT', 'PROFIT'].includes(sig.status);
+            <AnimatePresence mode="popLayout">
+              {filteredSignals.length > 0 ? (
+                filteredSignals.map((sig) => {
+                  const isCE = sig.optionType === 'CE';
+                  const isActive = sig.status === 'ACTIVE';
+                  
+                  return (
+                    <motion.div
+                      key={sig._id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+                    >
+                      <GlassCard hasGlow={isActive} glowColor={isCE ? 'green' : 'amber'}>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                          <div className="space-y-3 flex-1">
+                            {/* Title details */}
+                            <div className="flex items-center gap-3.5 flex-wrap">
+                              <span className="text-base font-black text-white italic tracking-wide">{sig.symbol}</span>
+                              <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-xl border ${
+                                isCE 
+                                  ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/25 shadow-[0_0_10px_rgba(16,185,129,0.08)]' 
+                                  : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/25 shadow-[0_0_10px_rgba(239,68,68,0.08)]'
+                              }`}>
+                                {sig.strike} {sig.optionType}
+                              </span>
+                              
+                              <span className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider bg-white/[0.02] border border-white/5 px-2 py-0.5 rounded-lg">
+                                {sig.trend || 'NEUTRAL'}
+                              </span>
 
-                return (
-                  <GlassCard key={sig._id} hasGlow={!isClosed} glowColor={isNifty ? 'amber' : 'cyan'}>
-                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                      {/* Signal header details */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-black text-white">{sig.symbol}</span>
-                          <span className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-md ${
-                            sig.optionType === 'CE' 
-                              ? 'bg-green-500/10 text-[#10B981] border border-[#10B981]/20' 
-                              : 'bg-red-500/10 text-[#EF4444] border border-[#EF4444]/20'
-                          }`}>
-                            {sig.strike} {sig.optionType}
-                          </span>
-                          <span className="text-[8px] font-bold text-[#71717A] uppercase tracking-wider">
-                            Source: {sig.source}
-                          </span>
+                              <span className="text-[8px] font-black text-[#D4AF37] uppercase tracking-wider bg-amber-500/5 border border-amber-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                <Cpu size={8} /> Confidence: {sig.confidenceScore || 85}%
+                              </span>
+                            </div>
+
+                            {/* AI rationale */}
+                            <p className="text-[10px] text-[#71717A] leading-relaxed max-w-xl">
+                              <span className="font-black text-[#D4AF37] uppercase tracking-wider mr-1">AI Diagnostics:</span>
+                              {sig.aiRationale}
+                            </p>
+                          </div>
+
+                          {/* Options prices */}
+                          <div className="flex flex-wrap gap-5 text-left shrink-0">
+                            <PriceBlock label="ENTRY" value={`₹${sig.entry}`} />
+                            <PriceBlock label="STOP LOSS" value={`₹${sig.sl}`} color="text-red-400" />
+                            <PriceBlock label="CURRENT" value={`₹${sig.currentPrice || sig.entry}`} color={isActive ? 'text-green-400' : 'text-[#71717A]'} />
+                            <PriceBlock label="TARGETS" value={sig.targets ? sig.targets.map(t => `₹${t}`).join(' → ') : '-'} color="text-cyan-400" />
+                          </div>
                         </div>
-                        <p className="text-[10px] text-[#A1A1AA] max-w-lg leading-relaxed">
-                          <span className="font-bold text-[#D4AF37] uppercase tracking-wider">AI Logic: </span>
-                          {sig.aiRationale}
-                        </p>
-                      </div>
 
-                      {/* Pricing block */}
-                      <div className="flex gap-6 text-left shrink-0">
-                        <PriceBlock label="ENTRY" value={`₹${sig.entry}`} />
-                        <PriceBlock label="STOP LOSS" value={`₹${sig.sl}`} color="text-[#EF4444]" />
-                        <PriceBlock label="CURRENT" value={`₹${sig.currentPrice || sig.entry}`} color={isClosed ? 'text-[#71717A]' : 'text-[#10B981]'} />
-                        <PriceBlock label="TARGET 1" value={`₹${sig.targets[0]}`} color="text-[#00C2FF]" />
-                      </div>
-                    </div>
+                        {/* Card bottom panel */}
+                        <div className="flex justify-between items-center border-t border-white/[0.03] mt-5 pt-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              sig.status === 'ACTIVE' 
+                                ? 'bg-amber-500 animate-pulse shadow-[0_0_8px_#F59E0B]' 
+                                : sig.status === 'TARGET_HIT' 
+                                  ? 'bg-green-500 shadow-[0_0_8px_#10B981]' 
+                                  : 'bg-red-500 shadow-[0_0_8px_#EF4444]'
+                            }`} />
+                            <span className="text-[9px] font-black tracking-widest text-[#A1A1AA] uppercase">
+                              STATUS: {sig.status}
+                            </span>
+                          </div>
 
-                    <div className="flex justify-between items-center border-t border-white/[0.03] mt-4 pt-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isClosed ? 'bg-[#71717A]' : 'bg-[#10B981] animate-pulse'}`} />
-                        <span className="text-[9px] font-black tracking-wider text-[#A1A1AA] uppercase">
-                          STATUS: {sig.status}
-                        </span>
-                      </div>
-
-                      {/* Action buttons */}
-                      {!isClosed ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => closeSignal(sig._id, 'CLOSED_PROFIT')}
-                            className="h-8 px-4 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 hover:border-[#10B981]/50 text-[#10B981] font-black text-[9px] tracking-wider uppercase transition-colors"
-                          >
-                            SETTLE PROFIT
-                          </button>
-                          <button
-                            onClick={() => closeSignal(sig._id, 'CLOSED_LOSS')}
-                            className="h-8 px-4 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20 hover:border-[#EF4444]/50 text-[#EF4444] font-black text-[9px] tracking-wider uppercase transition-colors"
-                          >
-                            SETTLE SL
-                          </button>
-                          <button
-                            onClick={() => deleteSignal(sig._id)}
-                            className="p-2 rounded-lg bg-white/5 border border-white/5 hover:text-[#EF4444] transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {/* Settlement / Resolution actions */}
+                          {isActive ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => closeSignal(sig._id, 'TARGET_HIT')}
+                                className="h-8 px-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:border-green-500/50 hover:bg-[#10B981] hover:text-black font-black text-[9px] tracking-wider uppercase transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-green-500"
+                              >
+                                <Target size={10} />
+                                TARGET HIT
+                              </button>
+                              <button
+                                onClick={() => closeSignal(sig._id, 'SL_HIT')}
+                                className="h-8 px-4 rounded-xl bg-red-500/10 border border-red-500/20 hover:border-red-500/50 hover:bg-[#EF4444] hover:text-white font-black text-[9px] tracking-wider uppercase transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-red-400"
+                              >
+                                <ShieldX size={10} />
+                                SL HIT
+                              </button>
+                              <button
+                                onClick={() => closeSignal(sig._id, 'CANCELLED')}
+                                className="h-8 px-4 rounded-xl bg-zinc-500/10 border border-zinc-500/20 hover:border-zinc-500/50 text-[#71717A] font-black text-[9px] tracking-wider uppercase transition-all duration-300 cursor-pointer"
+                              >
+                                CANCEL
+                              </button>
+                              <button
+                                onClick={() => deleteSignal(sig._id)}
+                                className="p-2 rounded-xl bg-white/5 border border-white/5 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 transition-all duration-300 cursor-pointer flex items-center justify-center"
+                                title="Delete Signal"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => deleteSignal(sig._id)}
+                              className="h-8 px-3 rounded-xl bg-white/5 border border-white/5 hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20 text-[#5A5E70] text-[9px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer"
+                            >
+                              DELETE ARCHIVE
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => deleteSignal(sig._id)}
-                          className="h-8 px-3 rounded-lg bg-white/5 border border-white/5 hover:text-[#EF4444] text-[#71717A] text-[9px] font-black uppercase tracking-wider transition-colors"
-                        >
-                          DELETE ARCHIVE
-                        </button>
-                      )}
-                    </div>
-                  </GlassCard>
-                );
-              })
-            ) : (
-              <GlassCard className="p-12 text-center text-[#71717A] uppercase font-black tracking-[4px]">
-                No Options setups found in this view
-              </GlassCard>
-            )}
+                      </GlassCard>
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-12 text-center text-[#5A5E70] uppercase font-black tracking-[4px] border border-white/[0.03] rounded-3xl bg-white/[0.01]"
+                >
+                  No Option Signals Found In This Cluster
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -206,12 +278,12 @@ export default function SignalsPage() {
           <GlassCard title="Signal Dispatch Engine" hasGlow={true}>
             <form onSubmit={handleSubmitSignal} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">SYMBOL</label>
                   <select 
                     value={symbol} 
                     onChange={(e) => setSymbol(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none"
+                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none font-bold"
                   >
                     <option value="NIFTY">Nifty 50</option>
                     <option value="BANKNIFTY">BankNifty</option>
@@ -220,12 +292,12 @@ export default function SignalsPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">OPTION TYPE</label>
                   <select 
                     value={optionType} 
                     onChange={(e) => setOptionType(e.target.value as any)}
-                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none"
+                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none font-bold"
                   >
                     <option value="CE">CE (Call Option)</option>
                     <option value="PE">PE (Put Option)</option>
@@ -235,7 +307,7 @@ export default function SignalsPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">STRIKE</label>
                   <input
                     type="number"
@@ -247,7 +319,7 @@ export default function SignalsPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">ENTRY</label>
                   <input
                     type="number"
@@ -259,7 +331,7 @@ export default function SignalsPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">STOP LOSS</label>
                   <input
                     type="number"
@@ -272,7 +344,7 @@ export default function SignalsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1 flex justify-between">
                   <span>TARGETS (COMMA SEPARATED)</span>
                   <span className="text-[7px] text-[#4B4B52]">e.g. 280,310,350</span>
@@ -287,19 +359,9 @@ export default function SignalsPage() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">AI Setup Rationale</label>
-                <textarea
-                  placeholder="Order book imbalance buying detected at 23450 support cluster..."
-                  value={aiRationale}
-                  onChange={(e) => setAiRationale(e.target.value)}
-                  className="w-full h-20 p-3 rounded-xl bg-[#0D0D12] border border-white/5 focus:border-[#D4AF37]/50 text-xs text-white outline-none font-bold resize-none leading-relaxed"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">CONFIDENCE (%)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">CONFIDENCE (%)</label>
                   <input
                     type="number"
                     placeholder="89"
@@ -309,14 +371,29 @@ export default function SignalsPage() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">RATING</label>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">TREND BIAS</label>
+                  <select 
+                    value={trend} 
+                    onChange={(e) => setTrend(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none font-bold"
+                  >
+                    <option value="BULLISH">Bullish Bias</option>
+                    <option value="BEARISH">Bearish Bias</option>
+                    <option value="SIDEWAYS">Sideways Neutral</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-[1px] text-[#71717A] pl-1">RATING TIER</label>
                   <select 
                     value={rating} 
                     onChange={(e) => setRating(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none"
+                    className="w-full h-11 px-3 rounded-xl bg-[#0D0D12] border border-white/5 text-xs text-white outline-none font-bold"
                   >
-                    <option value="WEAK">Weak Option</option>
+                    <option value="WEAK">Weak Strength</option>
                     <option value="MEDIUM">Medium Strength</option>
                     <option value="STRONG">Strong Setup</option>
                     <option value="PREMIUM">Premium Elite</option>
@@ -324,9 +401,19 @@ export default function SignalsPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase tracking-[1.5px] text-[#71717A] pl-1">AI Setup Rationale</label>
+                <textarea
+                  placeholder="Order book imbalance buying detected at support cluster..."
+                  value={aiRationale}
+                  onChange={(e) => setAiRationale(e.target.value)}
+                  className="w-full h-20 p-3 rounded-xl bg-[#0D0D12] border border-white/5 focus:border-[#D4AF37]/50 text-xs text-white outline-none font-bold resize-none leading-relaxed"
+                />
+              </div>
+
               <button
                 type="submit"
-                className="w-full h-12 rounded-xl bg-[#D4AF37] text-black font-black uppercase text-[10px] tracking-[2px] active:scale-[0.98] transition-transform shadow-[0_4px_12px_rgba(212,175,55,0.15)]"
+                className="w-full h-12 rounded-xl bg-[#D4AF37] text-black font-black uppercase text-[10px] tracking-[2px] active:scale-[0.98] transition-all duration-300 shadow-[0_4px_12px_rgba(212,175,55,0.15)] hover:scale-[1.01] hover:bg-[#cfa52f] cursor-pointer"
               >
                 BROADCAST SIGNAL TO CLUSTER
               </button>
@@ -338,13 +425,12 @@ export default function SignalsPage() {
   );
 }
 
-// Sub component inside signals page
 const PriceBlock = ({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) => (
   <div className="space-y-1">
-    <span className="text-[8px] font-black text-[#71717A] tracking-[1px] uppercase block">
+    <span className="text-[8px] font-black text-[#5A5E70] tracking-[1px] uppercase block">
       {label}
     </span>
-    <span className={`text-sm font-black tracking-tight ${color}`}>
+    <span className={`text-xs font-black tracking-tight ${color}`}>
       {value}
     </span>
   </div>

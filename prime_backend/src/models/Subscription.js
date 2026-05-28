@@ -28,5 +28,9 @@ const subscriptionSchema = new mongoose.Schema({
   razorpaySignature: { type: String },
 }, { timestamps: true });
 
+// 🔥 SCALING INDEXES
+subscriptionSchema.index({ status: 1 });
+subscriptionSchema.index({ razorpayOrderId: 1 }, { sparse: true });
+
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
 export default Subscription;

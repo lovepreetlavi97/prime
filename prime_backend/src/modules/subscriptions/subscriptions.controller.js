@@ -2,6 +2,7 @@ import subscriptionsService from './subscriptions.service.js';
 import User from '../../models/User.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { invalidateCachePattern } from '../../middlewares/cacheMiddleware.js';
 
 class SubscriptionsController {
   
@@ -77,18 +78,21 @@ class SubscriptionsController {
 
   async createPackage(request, reply) {
     const pkg = await subscriptionsService.createPackage(request.body);
+    await invalidateCachePattern('*packages*');
     return pkg;
   }
 
   async deletePackage(request, reply) {
     const { id } = request.params;
     await subscriptionsService.deletePackage(id);
+    await invalidateCachePattern('*packages*');
     return { status: 'ok', message: 'Package deleted' };
   }
 
   async updatePackage(request, reply) {
     const { id } = request.params;
     const pkg = await subscriptionsService.updatePackage(id, request.body);
+    await invalidateCachePattern('*packages*');
     return pkg;
   }
 

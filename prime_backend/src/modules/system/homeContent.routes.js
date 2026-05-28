@@ -1,9 +1,9 @@
 import * as controller from './homeContent.controller.js';
-// Pre-handler for admin routes could be added here if needed
+import { routeCache } from '../../middlewares/cacheMiddleware.js';
 
 export default async function (fastify, opts) {
-  // Public route
-  fastify.get('/', controller.getHomeContent);
+  // Public route cached for 60 seconds
+  fastify.get('/', { preHandler: [routeCache(60)] }, controller.getHomeContent);
   
   // Admin-only (should ideally have auth middleware)
   fastify.put('/', controller.updateHomeContent);

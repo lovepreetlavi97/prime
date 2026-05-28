@@ -18,8 +18,14 @@ class RealtimeGateway {
     this.io = io;
     logger.info({ mode: 'PRIMARY' }, '🌐 Intelligent Realtime Gateway Active');
 
-    // Subscribe to Global Redis Events
+    // Subscribe to specific and wildcard pattern Redis channels
     sub.subscribe('GLOBAL_REALTIME_EVENTS');
+    sub.psubscribe('market:*', 'signal:*', 'notification:*');
+
+    sub.on('pmessageBuffer', (pattern, channel, message) => {
+      this.processEvent(message);
+    });
+
     sub.on('messageBuffer', (channel, message) => {
       if (channel.toString() === 'GLOBAL_REALTIME_EVENTS') {
         this.processEvent(message);

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:prime_mobile/main.dart';
 import 'package:prime_mobile/core/socket_service.dart';
+import 'package:prime_mobile/core/design_system.dart';
 
 class MockSocketService extends SocketService {
   @override
@@ -31,11 +32,11 @@ void main() {
         overrides: [
           socketServiceProvider.overrideWithValue(MockSocketService()),
         ],
-        child: const LVPrimeXApp(),
+        child: const PrimeTradeApp(),
       ),
     );
 
-    // Verify that the dashboard title is displayed.
-    expect(find.text('LVPrimeX'), findsOneWidget);
+    // Verify that the logo is loaded successfully.
+    expect(find.byType(LvxLogo), findsOneWidget);
   });
 }

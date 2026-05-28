@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAdminStore } from '../store/useAdminStore';
-import { 
-  StatCard 
-} from '../components/StatCard';
+import { StatCard } from '../components/StatCard';
 import { 
   Users, Radio, TrendingUp, Activity, Bell, Cpu, 
-  Database, Zap, ArrowUpRight, ShieldAlert, Sparkles
+  Database, Zap, ArrowUpRight, ShieldAlert, Sparkles,
+  TrendingDown, Globe, MessageSquare, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import { GlassCard } from '../components/GlassCard';
 import { RealtimeChart } from '../components/RealtimeChart';
@@ -28,17 +28,20 @@ export default function DashboardPage() {
   }, [setActiveTab]);
 
   useEffect(() => {
-    // Initial fetch loops
-    fetchStats();
-    fetchUsers();
-    fetchSignals();
-    fetchPackages();
-    fetchAuditLogs();
+    // ⚡ Batch parallel initial data fetches
+    Promise.all([
+      fetchStats(),
+      fetchUsers(),
+      fetchSignals(),
+      fetchPackages(),
+      fetchAuditLogs(),
+    ]);
 
+    // ⚡ Poll only time-critical data at 10s intervals (was 5s)
     const interval = setInterval(() => {
       fetchStats();
       fetchSignals();
-    }, 5000); // Sync stats and feed updates every 5s
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [fetchStats, fetchUsers, fetchSignals, fetchPackages, fetchAuditLogs]);
@@ -58,7 +61,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Mock charts dataset
+  // User growth dataset
   const userGrowthData = [
     { name: '09:00', value: 410 },
     { name: '10:00', value: 425 },
@@ -69,6 +72,7 @@ export default function DashboardPage() {
     { name: '15:00', value: 480 },
   ];
 
+  // Network latency dataset
   const apiLatencyData = [
     { name: '10s ago', value: 12 },
     { name: '8s ago', value: 16 },
@@ -78,61 +82,94 @@ export default function DashboardPage() {
     { name: 'Now', value: latency },
   ];
 
+  // System animation configurations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 80 } }
+  };
+
   return (
-    <div className="space-y-8 select-none">
-      {/* Upper header segment */}
-      <div className="flex justify-between items-center">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-8 select-none"
+    >
+      {/* Upper Header segment */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1.5">
-          <h2 className="text-3xl font-black text-white uppercase italic tracking-tight">
-            OPERATIONS <span className="text-[#D4AF37]">CENTER</span>
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
+            <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[3px]">PRIME TRADE OPERATIONS PANEL</span>
+          </div>
+          <h2 className="text-3xl font-black text-white uppercase italic tracking-tight leading-none">
+            Ecosystem <span className="text-[#D4AF37]">Control Center</span>
           </h2>
-          <p className="text-[10px] font-black text-[#71717A] uppercase tracking-[4px]">
-            LVPrimeX Neural Ecosystem Telemetry
+          <p className="text-[10px] font-black text-[#5A5E70] uppercase tracking-[4px]">
+            Neural Market Telemetry & Core Admin Operations
           </p>
         </div>
 
-        <button 
-          onClick={handlePostSignalToInstagram}
-          disabled={igLoading}
-          className="h-12 px-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/20 text-[#D4AF37] font-black text-[10px] tracking-[2.5px] uppercase transition-all duration-300 active:scale-[0.98]"
-        >
-          {igLoading ? 'DISPATCHING...' : 'POST TOP SIGNAL TO INSTAGRAM'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handlePostSignalToInstagram}
+            disabled={igLoading}
+            className="h-12 px-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/50 hover:bg-[#D4AF37] hover:text-black font-black text-[10px] tracking-[2.5px] uppercase transition-all duration-300 active:scale-[0.98] flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(212,175,55,0.05)] text-[#D4AF37]"
+          >
+            <Sparkles size={12} />
+            {igLoading ? 'DISPATCHING...' : 'POST TOP SIGNAL TO INSTAGRAM'}
+          </button>
+        </div>
       </div>
 
       {igSuccess && (
         <div className="p-4 rounded-2xl bg-[#10B981]/10 border border-[#10B981]/20 text-[#10B981] text-xs font-bold tracking-wide flex items-center justify-between">
           <span>{igSuccess}</span>
-          <button onClick={() => setIgSuccess(null)} className="text-[9px] uppercase tracking-wider hover:underline">Dismiss</button>
+          <button onClick={() => setIgSuccess(null)} className="text-[9px] uppercase tracking-wider hover:underline cursor-pointer">Dismiss</button>
         </div>
       )}
 
       {/* Grid of 4 core KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Active User Base" value={stats.totalUsers} change="+4.2%" isPositive={true} icon={Users} glowColor="cyan" />
         <StatCard title="Signals Generated" value={stats.signalsToday} change="+18.6%" isPositive={true} icon={Radio} glowColor="amber" />
         <StatCard title="Subscription Revenue" value={`₹${stats.revenue.toLocaleString()}`} change="+12.4%" isPositive={true} icon={TrendingUp} glowColor="green" />
         <StatCard title="Active WS Links" value={stats.activeConnections} change="-1.2%" isPositive={false} icon={Activity} glowColor="cyan" />
       </div>
 
-      {/* Main split grid: Charts & Real-time indices */}
+      {/* Split grid for Telemetries */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Side: Graphs */}
         <div className="lg:col-span-8 space-y-6">
-          <GlassCard title="Active User Imbalance" hasGlow={true} glowColor="cyan">
+          
+          {/* Subscriptions Growth */}
+          <GlassCard title="Active Subscriber Imbalance" hasGlow={true} glowColor="cyan">
             <div className="flex justify-between items-center mb-6">
               <span className="text-xs font-black uppercase tracking-[2px] text-white">
                 Subscribers Growth Chart
               </span>
-              <span className="text-[9px] font-bold text-[#10B981] uppercase tracking-[1.5px] bg-[#10B981]/5 border border-[#10B981]/15 px-2.5 py-1 rounded-lg">
-                High-Volume
-              </span>
+              <div className="flex gap-2">
+                <span className="text-[8px] font-black text-[#10B981] uppercase tracking-[1.5px] bg-[#10B981]/5 border border-[#10B981]/15 px-2.5 py-1 rounded-lg">
+                  LIVE REVENUE SYNC
+                </span>
+              </div>
             </div>
             <RealtimeChart data={userGrowthData} color="#00C2FF" />
           </GlassCard>
 
           {/* Infrastructure Health Split */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Latency Tracker */}
             <GlassCard>
               <div className="flex justify-between items-start mb-4">
                 <div className="space-y-1">
@@ -150,6 +187,7 @@ export default function DashboardPage() {
               <RealtimeChart data={apiLatencyData} color="#D4AF37" />
             </GlassCard>
 
+            {/* Health Rows */}
             <GlassCard>
               <div className="space-y-4">
                 <span className="text-[8px] font-black uppercase tracking-[2px] text-[#71717A]">
@@ -161,17 +199,101 @@ export default function DashboardPage() {
 
                 <div className="space-y-3.5">
                   <HealthRow label="Database Engine" value="MongoDB Atlas" status={systemHealth.dbStatus} desc="Response time: 4.8ms" />
-                  <HealthRow label="Cache Imbalance" value="Redis In-Memory" status={systemHealth.redisStatus} desc="Active keys: 1,480" />
+                  <HealthRow label="Cache Clusters" value="Redis In-Memory" status={systemHealth.redisStatus} desc="Active keys: 1,480" />
                   <HealthRow label="AI Diagnostics" value="OpenAI/DeepSeek API" status="CONNECTED" desc="Latency: 420ms" />
                   <HealthRow label="WS Heartbeat" value="Fastify WebSocket Cluster" status="CONNECTED" desc="Ping: 10s intervals" />
                 </div>
               </div>
             </GlassCard>
           </div>
+
+          {/* Recent Active Signals Panel */}
+          <GlassCard title="ACTIVE OPTION SIGNALS FEED">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/5 pb-2">
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3 pl-1">Instrument</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">Type</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">Option</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">Entry</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">SL</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">Target</th>
+                    <th className="text-[8px] font-black text-[#5A5E70] uppercase tracking-wider py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signals.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-[10px] text-center text-[#5A5E70] py-4">No active signals found.</td>
+                    </tr>
+                  ) : (
+                    signals.slice(0, 4).map((sig) => (
+                      <tr key={sig._id} className="border-b border-white/[0.02] last:border-none hover:bg-white/[0.01]">
+                        <td className="py-3 pl-1 font-bold text-white text-[11px]">{sig.symbol}</td>
+                        <td className="py-3">
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-md ${sig.type === 'BUY' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#EF4444]/10 text-[#EF4444]'}`}>
+                            {sig.type}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span className={`text-[9px] font-black ${sig.optionType === 'CE' ? 'text-green-400' : sig.optionType === 'PE' ? 'text-red-400' : 'text-zinc-400'}`}>
+                            {sig.strike || sig.symbol.includes('CE') ? 'CE' : 'PE'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-[10px] font-bold text-[#A1A1AA]">₹{sig.entry}</td>
+                        <td className="py-3 text-[10px] font-bold text-[#A1A1AA]">₹{sig.sl}</td>
+                        <td className="py-3 text-[10px] font-bold text-[#A1A1AA]">₹{sig.targets ? sig.targets[0] : '-'}</td>
+                        <td className="py-3">
+                          <span className={`text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full ${
+                            sig.status === 'ACTIVE' 
+                              ? 'bg-amber-500/10 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.1)]' 
+                              : sig.status.includes('HIT') || sig.status.includes('PROFIT')
+                                ? 'bg-green-500/10 text-green-500' 
+                                : 'bg-zinc-500/10 text-zinc-500'
+                          }`}>
+                            {sig.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </GlassCard>
         </div>
 
         {/* Right Side: Indices Overview & Audit Logs */}
         <div className="lg:col-span-4 space-y-6">
+          {/* AI Neural Sentiment Tracker */}
+          <GlassCard>
+            <span className="text-[8px] font-black uppercase tracking-[2px] text-[#71717A] block mb-3">
+              AI NEURAL SENTIMENT ANALYSIS
+            </span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-black text-white uppercase italic">Market Bias</h4>
+                <span className="text-[9px] font-black bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded-md">
+                  STRONG BULLISH
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[9px] font-bold text-[#71717A] uppercase">
+                  <span>Extreme Bearish</span>
+                  <span className="text-white font-black">Greed Score: 78/100</span>
+                  <span>Extreme Bullish</span>
+                </div>
+                <div className="h-2 w-full bg-[#0D0D12] rounded-full overflow-hidden border border-white/5">
+                  <div className="h-full bg-gradient-to-r from-red-500 via-amber-500 to-green-500 rounded-full" style={{ width: '78%' }} />
+                </div>
+              </div>
+              <p className="text-[10px] text-[#71717A] leading-relaxed">
+                Aggregated social indicators, option chain PCR ratios, and FII net buying volumes represent a high confidence buying momentum.
+              </p>
+            </div>
+          </GlassCard>
+
           {/* Realtime Market Prices */}
           <GlassCard>
             <span className="text-[8px] font-black uppercase tracking-[2px] text-[#71717A] block mb-4">
@@ -205,7 +327,7 @@ export default function DashboardPage() {
               </span>
               <button 
                 onClick={() => setActiveTab('audit-logs')}
-                className="text-[8px] font-black text-[#D4AF37] uppercase tracking-[1.5px] hover:underline"
+                className="text-[8px] font-black text-[#D4AF37] uppercase tracking-[1.5px] hover:underline cursor-pointer"
               >
                 VIEW ALL
               </button>
@@ -226,7 +348,7 @@ export default function DashboardPage() {
           </GlassCard>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

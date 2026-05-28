@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useSignalStore } from '@/store/useSignalStore';
 import { useShallow } from 'zustand/react/shallow';
 import { LuxurySignalCard } from '@/components/LuxurySignalCard';
@@ -9,6 +10,12 @@ import { MobileHeader } from '@/components/MobileHeader';
 import { GlobalBottomNav } from '@/components/GlobalBottomNav';
 import { Logo } from '@/components/Logo';
 import { ConnectivityBanner } from '@/components/ConnectivityBanner';
+
+// ⚡ Dynamic Import for LandingPage to reduce initial dashboard bundle size
+const LandingPage = dynamic(() => import('@/components/LandingPage').then(mod => mod.LandingPage), {
+  loading: () => <div className="min-h-screen bg-[#060606] flex items-center justify-center text-zinc-500 uppercase tracking-widest text-xs">Loading...</div>
+});
+
 import { 
   Home as HomeIcon, 
   Zap, 
@@ -37,7 +44,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { API_URL, SOCKET_URL } from '@/config';
 
-const StatItem = ({ label, value, color, dot, subValue }: { label: string; value: string; color?: string; dot?: boolean; subValue?: string }) => (
+// ⚡ Memoized StatItem
+const StatItem = React.memo(({ label, value, color, dot, subValue }: { label: string; value: string; color?: string; dot?: boolean; subValue?: string }) => (
   <div className="flex-1 flex flex-col items-center justify-center py-2 px-2.5 rounded-[16px] bg-white/[0.01] border border-white/5 hover:bg-white/[0.03] hover:border-[#D4AF37]/20 transition-all">
     <div className="flex items-center gap-1 mb-0.5">
       {dot && <div className={`w-1 h-1 rounded-full ${color?.replace('text-', 'bg-') || 'bg-[#D4AF37]'} animate-pulse shadow-[0_0_8px_currentColor]`} />}
@@ -48,10 +56,11 @@ const StatItem = ({ label, value, color, dot, subValue }: { label: string; value
       {subValue && <span className="text-[7px] font-bold text-[#A1A1AA] opacity-40">{subValue}</span>}
     </div>
   </div>
-);
+));
+StatItem.displayName = 'StatItem';
 
-// 📈 GOLD MINI CANDLESTICK CHART GRAPHICS
-const MiniCandlestickChart = () => (
+// ⚡ Memoized MiniCandlestickChart
+const MiniCandlestickChart = React.memo(() => (
   <div className="flex items-end gap-1.5 h-14 justify-center select-none">
     {[
       { h: 35, w: 4, isUp: true, offset: 10 },
@@ -71,10 +80,11 @@ const MiniCandlestickChart = () => (
       </div>
     ))}
   </div>
-);
+));
+MiniCandlestickChart.displayName = 'MiniCandlestickChart';
 
-// 📈 PORTFOLIO EQUITY LINE NEON CURVE
-const EquityLineChart = () => (
+// ⚡ Memoized EquityLineChart
+const EquityLineChart = React.memo(() => (
   <div className="w-full h-24 relative mt-2 select-none">
     <svg className="w-full h-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
       <defs>
@@ -104,7 +114,8 @@ const EquityLineChart = () => (
       <circle cx="300" cy="15" r="2.5" fill="#D4AF37" />
     </svg>
   </div>
-);
+));
+EquityLineChart.displayName = 'EquityLineChart';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -348,6 +359,10 @@ export default function Dashboard() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <LandingPage />;
   }
 
   const formatPrice = (price?: number) => price ? price.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '--';

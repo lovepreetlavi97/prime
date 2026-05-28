@@ -7,16 +7,11 @@ import logger from '../utils/logger.js';
  * Handles high-scale, ultra-low latency event delivery to users.
  */
 class NotificationService {
-  /**
-   * Send a global signal update
-   */
   async broadcastSignal(signal) {
     try {
-      // 1. Publish to Redis Pub/Sub for cross-server broadcast
-      const payload = JSON.stringify({ type: 'NEW_SIGNAL', signal });
-      await pub.publish('SIGNAL_EVENTS', payload);
-      
-      logger.info(`📡 [Notification] Broadcasted signal ${signal.symbol} via Pub/Sub`);
+      // Unified global emission mapping to the dedicated Redis channels
+      await socketService.emitGlobal('new_signal', signal);
+      logger.info(`📡 [Notification] Broadcasted signal ${signal.symbol} via socketService.emitGlobal`);
     } catch (err) {
       logger.error(`[Notification] Broadcast failed: ${err.message}`);
     }

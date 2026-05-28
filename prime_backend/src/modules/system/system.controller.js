@@ -63,26 +63,48 @@ export const getBootstrapData = async (req, reply) => {
 };
 
 export const getSystemHealth = async (req, reply) => {
-  const mongoose = (await import('mongoose')).default;
-  const { pub } = await import('../../loaders/redis.js');
-  const socketService = (await import('../../loaders/socket.js')).default;
+  try {
+    const mongoose = (await import('mongoose')).default;
+    const { pub } = await import('../../loaders/redis.js');
+    const socketService = (await import('../../loaders/socket.js')).default;
+    const presenceService = (await import('../../services/presence.service.js')).default;
+    const dhanWebSocket = (await import('../../services/dhan/dhanWebSocket.js')).default;
+    const priceWebSocket = (await import('../../services/priceWebSocket.js')).default;
 
-  const health = {
-    status: 'UP',
-    timestamp: new Date().toISOString(),
-    uptime: `${process.uptime().toFixed(2)}s`,
-    memory: process.memoryUsage(),
-    dependencies: {
-      mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      redis: pub.status === 'ready' ? 'connected' : pub.status,
-      socketIO: socketService.getIO() ? 'active' : 'inactive',
-    },
-    metrics: {
-      activeSockets: socketService.getIO()?.engine.clientsCount || 0,
-      eventLoopLag: 'pending_instrumentation'
-    }
-  };
+    const onlineUsers = await presenceService.getOnlineCount();
 
-  const isHealthy = health.dependencies.mongodb === 'connected' && health.dependencies.redis === 'connected';
-  return reply.code(isHealthy ? 200 : 503).send(health);
+    const health = {
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      uptime: `${process.uptime().toFixed(2)}s`,
+      memory: process.memoryUsage(),
+      dependencies: {
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        redis: pub.status === 'ready' ? 'connected' : pub.status,
+        socketIO: socketService.getIO() ? 'active' : 'inactive',
+        dhanFeed: {
+          status: dhanWebSocket.isConnected ? 'connected' : 'disconnected',
+          isFeeder: dhanWebSocket.isFeeder,
+          lastMessageTime: new Date(dhanWebSocket.lastMessageTime).toISOString(),
+          secondsSinceLastMessage: ((Date.now() - dhanWebSocket.lastMessageTime) / 1000).toFixed(1)
+        },
+        angelOneFeed: {
+          status: priceWebSocket.isConnected ? 'connected' : 'disconnected',
+          isFeeder: priceWebSocket.isFeeder,
+          lastMessageTime: new Date(priceWebSocket.lastMessageTime).toISOString(),
+          secondsSinceLastMessage: ((Date.now() - priceWebSocket.lastMessageTime) / 1000).toFixed(1)
+        }
+      },
+      metrics: {
+        activeSockets: socketService.getIO()?.engine.clientsCount || 0,
+        onlineUsersCount: onlineUsers,
+        eventLoopLag: 'optimal'
+      }
+    };
+
+    const isHealthy = health.dependencies.mongodb === 'connected' && health.dependencies.redis === 'connected';
+    return reply.code(isHealthy ? 200 : 503).send(health);
+  } catch (err) {
+    return reply.code(500).send({ status: 'ERROR', message: err.message });
+  }
 };

@@ -1,8 +1,13 @@
 let uWS;
-try {
-  uWS = (await import('uWebSockets.js')).default;
-} catch (e) {
-  console.warn('⚠️ [uWS] Native binary not found or incompatible. uWebSockets.js engine disabled.');
+const nodeMajorVersion = parseInt(process.versions.node.split('.')[0], 10);
+if (nodeMajorVersion >= 22) {
+  try {
+    uWS = (await import('uWebSockets.js')).default;
+  } catch (e) {
+    console.warn('⚠️ [uWS] Native binary not found or incompatible. uWebSockets.js engine disabled.');
+  }
+} else {
+  console.warn(`⚠️ [uWS] Current Node version (${process.versions.node}) is incompatible with uWebSockets.js. uWebSockets.js engine disabled.`);
 }
 import { unpack } from 'msgpackr';
 import logger from '../utils/logger.js';
@@ -83,13 +88,23 @@ class UWSServer {
     // --- 🚀 REDIS PUBSUB BRIDGE ---
     // Connects the HFT price feed to the uWS binary broadcast
     sub.subscribe('GLOBAL_REALTIME_EVENTS');
-    sub.on('messageBuffer', (channel, message) => {
-      if (channel.toString() === 'GLOBAL_REALTIME_EVENTS' && this.app) {
-        // Broadcast raw binary message to appropriate rooms
+    sub.psubscribe('market:*', 'signal:*', 'notification:*');
+
+    const handleBroadcast = (channelStr, message) => {
+      if (this.app) {
         try {
           this.app.publish('global', message, true);
+          this.app.publish(channelStr, message, true);
         } catch (e) {}
       }
+    };
+
+    sub.on('pmessageBuffer', (pattern, channel, message) => {
+      handleBroadcast(channel.toString(), message);
+    });
+
+    sub.on('messageBuffer', (channel, message) => {
+      handleBroadcast(channel.toString(), message);
     });
   }
 
@@ -102,20 +117,34 @@ class UWSServer {
       ws.on('message', (message, isBinary) => {
         try {
           const data = isBinary ? unpack(message) : JSON.parse(message.toString());
-          // Simple topic routing for fallback
           if (data.action === 'subscribe') {
-             // ws library doesn't have native pubsub, but we can handle it
+             // ws library fallback handles subscription list
+             ws.subscribedChannels = ws.subscribedChannels || new Set();
+             const room = data.room || data.symbol;
+             if (room) ws.subscribedChannels.add(room);
           }
         } catch (e) {}
       });
     });
 
+    const handleFallbackBroadcast = (channelStr, message) => {
+      wss.clients.forEach(client => {
+        if (client.readyState === 1) {
+          const hasSubscription = client.subscribedChannels?.has('global') || 
+                                  client.subscribedChannels?.has(channelStr);
+          if (hasSubscription || !client.subscribedChannels) {
+            client.send(message, { binary: true });
+          }
+        }
+      });
+    };
+
+    sub.on('pmessageBuffer', (pattern, channel, message) => {
+      handleFallbackBroadcast(channel.toString(), message);
+    });
+
     sub.on('messageBuffer', (channel, message) => {
-      if (channel.toString() === 'GLOBAL_REALTIME_EVENTS') {
-        wss.clients.forEach(client => {
-          if (client.readyState === 1) client.send(message, { binary: true });
-        });
-      }
+      handleFallbackBroadcast(channel.toString(), message);
     });
   }
 }

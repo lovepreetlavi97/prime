@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAdminStore } from '../store/useAdminStore';
 import { Sidebar } from '../components/Sidebar';
+import { Topbar } from '../components/Topbar';
 
 export default function RootLayoutShell({
   children,
@@ -53,9 +54,13 @@ export default function RootLayoutShell({
       <Sidebar />
 
       {/* Main viewport */}
-      <main className="flex-grow h-full overflow-y-auto no-scrollbar flex flex-col p-8 bg-[#03050C]">
-        {children}
-      </main>
+      <div className="flex-grow flex flex-col h-full overflow-hidden">
+        <Topbar />
+        
+        <main className="flex-grow overflow-y-auto no-scrollbar p-8 bg-[#03050C]">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

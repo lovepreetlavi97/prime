@@ -377,82 +377,6 @@ class _GaugePainter extends CustomPainter {
   }
 }
 
-class LvxLogoPainter extends CustomPainter {
-  final Color color;
-
-  LvxLogoPainter({this.color = AppTheme.primary});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    // Paint for the strokes
-    final Paint strokePaint = Paint()
-      ..color = color
-      ..strokeWidth = w * 0.07 // Thickness relative to size
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
-    // 1. Draw outer diamond shield (thin gold line)
-    final Paint borderPaint = Paint()
-      ..color = color.withOpacity(0.3)
-      ..strokeWidth = w * 0.02
-      ..style = PaintingStyle.stroke;
-    
-    final Path diamondPath = Path()
-      ..moveTo(w * 0.5, h * 0.08)
-      ..lineTo(w * 0.92, h * 0.5)
-      ..lineTo(w * 0.5, h * 0.92)
-      ..lineTo(w * 0.08, h * 0.5)
-      ..close();
-    canvas.drawPath(diamondPath, borderPaint);
-
-    // 2. Draw 'L'
-    // Vertical: (0.3 * w, 0.28 * h) -> (0.3 * w, 0.72 * h)
-    // Horizontal: (0.3 * w, 0.72 * h) -> (0.52 * w, 0.72 * h)
-    final Path pathL = Path()
-      ..moveTo(w * 0.3, h * 0.28)
-      ..lineTo(w * 0.3, h * 0.72)
-      ..lineTo(w * 0.52, h * 0.72);
-    canvas.drawPath(pathL, strokePaint);
-
-    // 3. Draw 'V' left arm
-    // (0.4 * w, 0.28 * h) -> (0.5 * w, 0.72 * h)
-    final Path pathVLeft = Path()
-      ..moveTo(w * 0.4, h * 0.28)
-      ..lineTo(w * 0.5, h * 0.72);
-    canvas.drawPath(pathVLeft, strokePaint);
-
-    // 4. Draw Rising Breakout Leg ('V' right arm & 'X' rising arm merged!)
-    // (0.5 * w, 0.72 * h) -> (0.75 * w, 0.25 * h)
-    final Path pathRising = Path()
-      ..moveTo(w * 0.5, h * 0.72)
-      ..lineTo(w * 0.75, h * 0.25);
-    canvas.drawPath(pathRising, strokePaint);
-
-    // Arrow head barbs at (0.75 * w, 0.25 * h)
-    // Horizontal left: (0.75 * w, 0.25 * h) -> (0.65 * w, 0.25 * h)
-    // Vertical down: (0.75 * w, 0.25 * h) -> (0.75 * w, 0.35 * h)
-    final Path pathArrow = Path()
-      ..moveTo(w * 0.65, h * 0.25)
-      ..lineTo(w * 0.75, h * 0.25)
-      ..lineTo(w * 0.75, h * 0.35);
-    canvas.drawPath(pathArrow, strokePaint);
-
-    // 5. Draw 'X' crossing leg
-    // (0.7 * w, 0.72 * h) -> (0.56 * w, 0.44 * h)
-    final Path pathXCross = Path()
-      ..moveTo(w * 0.7, h * 0.72)
-      ..lineTo(w * 0.56, h * 0.44);
-    canvas.drawPath(pathXCross, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant LvxLogoPainter oldDelegate) => oldDelegate.color != color;
-}
-
 class LvxLogo extends StatelessWidget {
   final double size;
   final Color? color;
@@ -461,11 +385,28 @@ class LvxLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: LvxLogoPainter(color: color ?? AppTheme.primary),
+      decoration: BoxDecoration(
+        color: color ?? AppTheme.primary,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: (color ?? AppTheme.primary).withValues(alpha: 0.35),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        'P',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: size * 0.6,
+          fontWeight: FontWeight.w900,
+          fontFamily: 'Outfit',
+        ),
       ),
     );
   }

@@ -46,8 +46,8 @@ export default function LoginPage() {
       
       // Sandbox validation override
       const emailStr = email.toLowerCase().trim();
-      if ((emailStr === 'admin@lvprimex.com' && password === 'admin') || 
-          (emailStr === 'admin@lvprimex.com' && password === 'admin123')) {
+      if ((emailStr === 'admin@primetrade.com' && password === 'admin') || 
+          (emailStr === 'admin@primetrade.com' && password === 'admin123')) {
         const mockAdminUser = {
           id: 'u4',
           phone: '9888877777',
@@ -58,7 +58,7 @@ export default function LoginPage() {
         addAuditLog({ adminName: 'Lovepreet Singh', action: 'LOGIN_OFFLINE', details: 'Offline admin credential bypass verified' });
         router.push('/');
       } else {
-        setError(err.response?.data?.error || 'Invalid credentials. Use admin@lvprimex.com / admin.');
+        setError(err.response?.data?.error || 'Invalid credentials. Use admin@primetrade.com / admin.');
       }
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ export default function LoginPage() {
               Operations <span className="text-[#D4AF37]">Login</span>
             </h2>
             <p className="text-[9px] font-black text-[#71717A] uppercase tracking-[3.5px]">
-              LVPrimeX SECURE GATEWAY
+              PRIME TRADE SECURE GATEWAY
             </p>
           </div>
 
@@ -105,7 +105,7 @@ export default function LoginPage() {
                 <Mail size={16} className="text-[#4B4B52]" />
                 <input
                   type="email"
-                  placeholder="admin@lvprimex.com"
+                  placeholder="admin@primetrade.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="flex-grow bg-transparent border-none text-white text-sm outline-none placeholder:text-white/20 tracking-wider font-bold"
@@ -132,7 +132,7 @@ export default function LoginPage() {
 
             <div className="flex justify-end items-center px-1">
               <span className="text-[8px] font-bold text-amber-500/50 uppercase tracking-[2px] flex items-center gap-1">
-                <Sparkles size={8} /> Bypass Credentials: admin@lvprimex.com / admin
+                <Sparkles size={8} /> Bypass Credentials: admin@primetrade.com / admin
               </span>
             </div>
 

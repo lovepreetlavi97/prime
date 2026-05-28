@@ -24,8 +24,8 @@ interface SignalState {
     notifications: boolean;
   };
 
-  activeTab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile';
-  setActiveTab: (tab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile') => void;
+  activeTab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile' | 'history';
+  setActiveTab: (tab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile' | 'history') => void;
 
   // Actions
 
@@ -79,8 +79,10 @@ export const useSignalStore = create<SignalState>()(
         const socket = io(url, {
           auth: { token },
           transports: ['websocket'],
-          reconnectionAttempts: 10,
-          reconnectionDelay: 1000,
+          reconnectionAttempts: 15,
+          reconnectionDelay: 500,
+          reconnectionDelayMax: 5000,
+          timeout: 10000,
         });
 
         // 🔥 BATCHING ENGINE: To prevent React Rerender Storms
@@ -131,7 +133,7 @@ export const useSignalStore = create<SignalState>()(
         };
 
         const queueBatch = () => {
-          if (!batchTimer) batchTimer = setTimeout(flushBatch, 250); // 250ms UI Throttle
+          if (!batchTimer) batchTimer = setTimeout(flushBatch, 100); // ⚡ 100ms UI Throttle (was 250ms)
         };
 
         socket.on('connect', () => {
@@ -196,6 +198,13 @@ export const useSignalStore = create<SignalState>()(
 
         socket.on('telegram_status', (status: any) => {
           set({ telegramStatus: status });
+        });
+
+        // ⚡ Direct price_update from backend signal service (separate from market_feed)
+        socket.on('price_update', (data: any) => {
+          if (!data._id) return;
+          signalBuffer[data._id] = { ...signalBuffer[data._id], ...data };
+          queueBatch();
         });
 
         socket.on('heartbeat', (data: any) => {

@@ -70,6 +70,15 @@ interface AdminState {
   deleteSignal: (id: string) => Promise<void>;
 
   dispatchNotification: (notifData: { type: string; title: string; body: string; target: string }) => Promise<void>;
+
+  // CMS & Submissions
+  homeContent: any | null;
+  fetchHomeContent: () => Promise<any>;
+  updateHomeContent: (content: any) => Promise<void>;
+  fetchLegalDocument: (type: string) => Promise<any>;
+  updateLegalDocument: (type: string, title: string, content: string) => Promise<void>;
+  fetchContactSubmissions: (search?: string, status?: string, page?: number) => Promise<any>;
+  resolveContactSubmission: (id: string, replyText: string) => Promise<void>;
   
   // Realtime handlers
   connectRealtime: () => void;
@@ -473,6 +482,69 @@ export const useAdminStore = create<AdminState>((set, get) => {
 
     disconnectRealtime: () => {
       disconnectSocket();
+    },
+
+    // CMS & Submissions Implementations
+    homeContent: null,
+    fetchHomeContent: async () => {
+      try {
+        const { data } = await api.get('/home-content');
+        set({ homeContent: data });
+        return data;
+      } catch (e) {
+        console.warn('Failed to fetch home content', e);
+        return null;
+      }
+    },
+    updateHomeContent: async (content) => {
+      try {
+        const { data } = await api.put('/home-content', content);
+        if (data.success) {
+          set({ homeContent: data.data });
+        }
+      } catch (e) {
+        console.warn('Failed to update home content', e);
+      }
+    },
+    fetchLegalDocument: async (type) => {
+      try {
+        const { data } = await api.get(`/system/legal/${type}`);
+        return data;
+      } catch (e) {
+        console.warn(`Failed to fetch legal doc ${type}`, e);
+        return {
+          type,
+          title: type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+          content: ''
+        };
+      }
+    },
+    updateLegalDocument: async (type, title, content) => {
+      try {
+        await api.put(`/system/legal/${type}`, { title, content });
+      } catch (e) {
+        console.warn(`Failed to update legal doc ${type}`, e);
+      }
+    },
+    fetchContactSubmissions: async (search, status, page) => {
+      try {
+        const params: any = {};
+        if (search) params.search = search;
+        if (status) params.status = status;
+        if (page) params.page = page;
+        const { data } = await api.get('/system/contact', { params });
+        return data;
+      } catch (e) {
+        console.warn('Failed to fetch contact submissions', e);
+        return { success: false, data: [] };
+      }
+    },
+    resolveContactSubmission: async (id, replyText) => {
+      try {
+        await api.put(`/system/contact/${id}/resolve`, { replyText });
+      } catch (e) {
+        console.warn(`Failed to resolve submission ${id}`, e);
+      }
     },
   };
 });

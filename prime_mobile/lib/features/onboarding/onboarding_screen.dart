@@ -16,25 +16,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingData> _pages = [
     OnboardingData(
-      title: 'Clarity Over Emotion',
-      subtitle: 'Market noise causes bad trades. LVPrimeX delivers calm, objective, AI-filtered intelligence to improve your execution.',
-      icon: Icons.psychology_outlined,
+      title: 'Real-Time Signals',
+      subtitle: 'Get precise entry, exit, and stop-loss levels before the crowd moves.',
+      icon: Icons.trending_up_rounded,
+      accentColor: AppTheme.success,
+      moodName: 'enter before the crowd',
+      backgroundColor: const Color(0xFF0E2F1F),
+    ),
+    OnboardingData(
+      title: 'AI Guidance',
+      subtitle: 'Avoid emotional trades with intelligent market structure analysis.',
+      icon: Icons.psychology_rounded,
       accentColor: AppTheme.primary,
-      moodName: 'calm & focused',
+      moodName: 'disciplined approach',
+      backgroundColor: const Color(0xFF302710),
     ),
     OnboardingData(
-      title: 'Elite Options Signals',
-      subtitle: 'Receive real-time option setups for NIFTY & BANKNIFTY with precise entry targets, stop losses, and transparent AI reasoning.',
-      icon: Icons.radar_outlined,
-      accentColor: AppTheme.secondary,
-      moodName: 'high confidence',
-    ),
-    OnboardingData(
-      title: 'Disciplined Journaling',
-      subtitle: 'Eliminate overtrading. Log trade setups, track psychological tags, and let AI analyze your execution discipline.',
-      icon: Icons.auto_stories_outlined,
-      accentColor: AppTheme.warning,
-      moodName: 'win-rate optimization',
+      title: 'Instant Alerts',
+      subtitle: 'Never miss a setup with real-time push notifications.',
+      icon: Icons.notifications_active_rounded,
+      accentColor: AppTheme.error,
+      moodName: 'capture every setup',
+      backgroundColor: const Color(0xFF331414),
     ),
   ];
 
@@ -74,14 +77,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'LVPrimeX',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const LvxLogo(size: 24),
+                      const SizedBox(width: 8),
+                      RichText(
+                        text: const TextSpan(
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                          ),
+                          children: [
+                            TextSpan(text: 'PRIME', style: TextStyle(color: Colors.white)),
+                            TextSpan(text: 'TRADE', style: TextStyle(color: AppTheme.primary)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   TextButton(
                     onPressed: _navigateToLogin,
@@ -129,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             width: 140,
                             height: 140,
                             decoration: BoxDecoration(
-                              color: AppTheme.secondaryBackground,
+                              color: item.backgroundColor,
                               borderRadius: BorderRadius.circular(32),
                               border: Border.all(
                                 color: item.accentColor.withValues(alpha: 0.3),
@@ -237,6 +252,7 @@ class OnboardingData {
   final IconData icon;
   final Color accentColor;
   final String moodName;
+  final Color backgroundColor;
 
   OnboardingData({
     required this.title,
@@ -244,5 +260,6 @@ class OnboardingData {
     required this.icon,
     required this.accentColor,
     required this.moodName,
+    required this.backgroundColor,
   });
 }

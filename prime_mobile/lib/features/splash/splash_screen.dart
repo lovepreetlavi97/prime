@@ -110,18 +110,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: const LvxLogo(size: 80),
+                    child: const Center(child: LvxLogo(size: 80)),
                   ),
                   const SizedBox(height: 24),
                   // App Title
-                  const Text(
-                    'LVPrimeX',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
+                      children: [
+                        TextSpan(text: 'PRIME', style: TextStyle(color: Colors.white)),
+                        TextSpan(text: 'TRADE', style: TextStyle(color: AppTheme.primary)),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
