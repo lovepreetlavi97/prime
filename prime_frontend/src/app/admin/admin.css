@@ -1,0 +1,17 @@
+/* Admin Specific Resets */
+.admin-body {
+    background: #f8fafc !important; /* slate-50 */
+    color: #0f172a !important;   /* slate-900 */
+    overflow: auto !important;
+}
+
+/* Hide public theme elements when in admin */
+.admin-layout-wrapper ~ .bg-glow,
+.admin-layout-wrapper ~ .particles {
+    display: none !important;
+}
+
+/* Force light mode for admin components if they use dark: prefixes */
+.admin-layout-wrapper {
+    color-scheme: light;
+}

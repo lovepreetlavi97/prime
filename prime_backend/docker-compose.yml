@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 🔥 PRIMARY API GATEWAY (Fastify)
+  api:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - MONGO_URI=mongodb://mongo:27017/primetrade
+    depends_on:
+      - redis
+      - mongo
+    networks:
+      - prime-network
+
+  # 🔥 BACKGROUND WORKERS (BullMQ)
+  worker:
+    build: .
+    command: node src/workers/ingestion.worker.js
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+    networks:
+      - prime-network
+
+  # 🔥 DISTRIBUTED REDIS (Cache + Pub/Sub + Queue)
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    networks:
+      - prime-network
+
+  # 🔥 PERSISTENCE TIER
+  mongo:
+    image: mongo:6
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - prime-network
+
+networks:
+  prime-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

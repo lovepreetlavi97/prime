@@ -1,0 +1,39 @@
+name: prime_mobile
+description: A world-class Flutter application for LVPrimeX AI-Powered Trading Intelligence.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.9
+  socket_io_client: ^2.0.3
+  dio: ^5.4.0
+  shared_preferences: ^2.2.2
+  cached_network_image: ^3.3.1
+  google_fonts: ^6.1.0
+  fl_chart: ^0.65.0
+  intl: ^0.19.0
+  lucide_icons: ^0.257.0 # For premium minimal icons
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.jpg"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
