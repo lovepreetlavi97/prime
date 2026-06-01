@@ -15,11 +15,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "PRIMETRADE | Premium Signals Engine",
+  title: "LVX | Premium Signals Engine",
   description: "The premium AI-powered signals platform. High-fidelity real-time stock market option signals.",
-  keywords: ["PrimeTrade Signals", "Option Signals", "BankNifty AI Alerts", "Institutional Trading Tools"],
+  keywords: ["LVX Signals", "Option Signals", "BankNifty AI Alerts", "Institutional Trading Tools"],
   openGraph: {
-    title: "PRIMETRADE | Premium Terminal",
+    title: "LVX | Premium Terminal",
     description: "Premium signals engine with institutional AI intelligence.",
     type: "website",
   },

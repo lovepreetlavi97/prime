@@ -1,17 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme.dart';
 import '../../core/design_system.dart';
+import '../../core/socket_service.dart';
 import '../dashboard/dashboard_screen.dart';
 
-class OtpLoginScreen extends StatefulWidget {
+class OtpLoginScreen extends ConsumerStatefulWidget {
   const OtpLoginScreen({super.key});
 
   @override
-  State<OtpLoginScreen> createState() => _OtpLoginScreenState();
+  ConsumerState<OtpLoginScreen> createState() => _OtpLoginScreenState();
 }
 
-class _OtpLoginScreenState extends State<OtpLoginScreen> {
+class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   
@@ -42,7 +47,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     });
   }
 
-  void _sendOtp() {
+  void _sendOtp() async {
     if (_phoneController.text.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -57,17 +62,51 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       _isLoading = true;
     });
 
-    // Simulate network delay
-    Timer(const Duration(milliseconds: 1200), () {
-      setState(() {
-        _isLoading = false;
-        _isOtpSent = true;
-      });
-      _startTimer();
-    });
+    try {
+      final baseUrl = ref.read(backendUrlProvider);
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/v1/auth/send-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'phone': _phoneController.text}),
+      );
+      
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        setState(() {
+          _isOtpSent = true;
+        });
+        _startTimer();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(decoded['message'] ?? 'OTP Sent successfully. Code: 1111'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(decoded['error'] ?? 'Failed to send OTP'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Connection error: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
-  void _verifyOtp() {
+  void _verifyOtp() async {
     String otp = _otpController.text;
     if (otp.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,15 +122,57 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       _isLoading = true;
     });
 
-    // Simulate OTP verification and login
-    Timer(const Duration(milliseconds: 1500), () {
-      setState(() {
-        _isLoading = false;
-      });
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+    try {
+      final baseUrl = ref.read(backendUrlProvider);
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/v1/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'phone': _phoneController.text,
+          'otp': otp,
+        }),
       );
-    });
+      
+      final decoded = json.decode(res.body);
+      if (res.statusCode == 200 && decoded['success'] == true) {
+        final token = decoded['token'];
+        final user = decoded['user'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        await prefs.setString('user_phone', user['phone'] ?? '');
+        await prefs.setString('user_plan', user['plan'] ?? 'free');
+        
+        ref.read(userTierProvider.notifier).state = user['plan'] ?? 'free';
+        
+        // Re-initialize socket with the new token
+        ref.read(socketServiceProvider).init();
+        
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(decoded['error'] ?? 'Invalid OTP code'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification error: $e'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -115,7 +196,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                     const LvxLogo(size: 32),
                     const SizedBox(width: 10),
                     const Text(
-                      'PRIME',
+                      'LV',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
@@ -124,7 +205,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                       ),
                     ),
                     const Text(
-                      'TRADE',
+                      'X',
                       style: TextStyle(
                         color: AppTheme.primary,
                         fontSize: 20,
@@ -202,7 +283,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                                   controller: _phoneController,
                                   keyboardType: TextInputType.phone,
                                   maxLength: 10,
-                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.semibold),
+                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
                                     counterText: '',
@@ -248,7 +329,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                                   controller: _otpController,
                                   keyboardType: TextInputType.number,
                                   maxLength: 6,
-                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.semibold, letterSpacing: 2.0),
+                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 2.0),
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
                                     counterText: '',

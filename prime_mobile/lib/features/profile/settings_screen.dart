@@ -29,7 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final String currentUrl = prefs.getString('backend_url') ?? 'http://10.0.2.2:4000';
+    final String currentUrl = prefs.getString('backend_url') ?? 'http://192.168.1.15:4000';
     setState(() {
       _urlController.text = currentUrl;
     });

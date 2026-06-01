@@ -55,7 +55,7 @@ export const MarketOverviewBar = () => {
           <PrimeLogo size={44} className="rounded-xl" />
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black tracking-[2px] text-[#D4AF37] uppercase">PRIMETRADE <span className="text-white">AI</span></span>
+              <span className="text-sm font-black tracking-[2px] text-[#D4AF37] uppercase">LVX <span className="text-white">AI</span></span>
             </div>
             <span className="text-[7px] font-black text-[#A1A1AA] uppercase tracking-[3px] leading-none opacity-80">Institutional Signals Engine</span>
           </div>

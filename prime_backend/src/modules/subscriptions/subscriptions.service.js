@@ -1,5 +1,6 @@
 import subscriptionsRepository from './subscriptions.repository.js';
 import AppError from '../../utils/appError.js';
+import { sendPushNotification } from '../../services/firebase.service.js';
 
 class SubscriptionsService {
   async listPackages(isAdmin = false) {
@@ -42,7 +43,26 @@ class SubscriptionsService {
     });
 
     // 2. Update current subscription in User document
-    return await subscriptionsRepository.updateUserSubscription(userId, subscriptionData);
+    const updatedUser = await subscriptionsRepository.updateUserSubscription(userId, subscriptionData);
+
+    // 3. Dispatch push notification if token is available
+    if (updatedUser && updatedUser.fcmToken) {
+      try {
+        await sendPushNotification(updatedUser.fcmToken, {
+          title: 'Subscription Upgraded! 🚀',
+          body: `Welcome to LVPrimeX ${pkg.name}. Your active access is unlocked until ${endDate.toLocaleDateString('en-IN')}.`,
+          data: {
+            type: 'SUBSCRIPTION_UPGRADE',
+            plan: pkg.name,
+            endDate: endDate.toISOString()
+          }
+        });
+      } catch (err) {
+        console.error('Failed to send push notification during package purchase:', err.message);
+      }
+    }
+
+    return updatedUser;
   }
 
   async deletePackage(id) {

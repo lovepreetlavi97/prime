@@ -18,10 +18,10 @@ export const Logo = ({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg
   return (
     <div className={`flex items-center gap-2.5 ${className} select-none`}>
       <div className={`rounded-full bg-[#D4AF37] font-black text-black flex items-center justify-center font-sans ${dimensions[size]} shadow-[0_0_12px_rgba(212,175,55,0.4)]`}>
-        P
+        L
       </div>
       <span className={`font-black ${textSizes[size]} text-white`}>
-        PRIME<span className="text-[#D4AF37]">TRADE</span>
+        LV<span className="text-[#D4AF37]">X</span>
       </span>
     </div>
   );

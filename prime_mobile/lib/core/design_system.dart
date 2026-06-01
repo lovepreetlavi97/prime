@@ -400,7 +400,7 @@ class LvxLogo extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: Text(
-        'P',
+        'L',
         style: TextStyle(
           color: Colors.black,
           fontSize: size * 0.6,

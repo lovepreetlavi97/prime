@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: 'flex', backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: '40px', borderRadius: '30px', border: `1px solid ${mainColor}`, justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '24px', fontWeight: '900' }}>DON'T MISS THE NEXT MOVE</span>
-              <span style={{ fontSize: '16px', color: '#A1A1AA' }}>Join Prime AI Signals for consistent winning trades.</span>
+              <span style={{ fontSize: '16px', color: '#A1A1AA' }}>Join LVX AI Signals for consistent winning trades.</span>
             </div>
             <div style={{ backgroundColor: 'white', color: 'black', padding: '20px 50px', borderRadius: '99px', fontSize: '20px', fontWeight: '900' }}>SUBSCRIBE</div>
           </div>

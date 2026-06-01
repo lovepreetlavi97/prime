@@ -123,8 +123,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         letterSpacing: 1.5,
                       ),
                       children: [
-                        TextSpan(text: 'PRIME', style: TextStyle(color: Colors.white)),
-                        TextSpan(text: 'TRADE', style: TextStyle(color: AppTheme.primary)),
+                        TextSpan(text: 'LV', style: TextStyle(color: Colors.white)),
+                        TextSpan(text: 'X', style: TextStyle(color: AppTheme.primary)),
                       ],
                     ),
                   ),

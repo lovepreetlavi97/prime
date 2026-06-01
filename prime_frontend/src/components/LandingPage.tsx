@@ -73,7 +73,7 @@ export const LandingPage = () => {
 
               {/* Subheading */}
               <p className="text-sm md:text-base text-[#A1A1AA] font-bold leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Entered late. Exited early. Or completely missed the layout. PRIME`TRADE` delivers precise entries, target ranges, and stop-loss levels before the crowd moves.
+                Entered late. Exited early. Or completely missed the layout. LVX delivers precise entries, target ranges, and stop-loss levels before the crowd moves.
               </p>
 
               {/* CTAs */}
@@ -233,7 +233,7 @@ export const LandingPage = () => {
             <div className="text-center space-y-4">
               <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[3px]">THE DIFFERENCE</span>
               <h2 className="text-3xl md:text-4xl font-black italic tracking-tighter uppercase font-outfit">
-                Why Elite Traders Choose <span className="text-[#D4AF37]">PRIME`TRADE`</span>
+                Why Elite Traders Choose <span className="text-[#D4AF37]">LVX</span>
               </h2>
             </div>
 
@@ -244,7 +244,7 @@ export const LandingPage = () => {
               <div className="bg-[#0E0E0E] border border-white/5 rounded-[32px] p-8 space-y-6">
                 <h4 className="text-sm font-black uppercase text-[#EF4444] tracking-wider flex items-center gap-2">
                   <XCircle size={16} />
-                  Without PRIME`TRADE`
+                  Without LVX
                 </h4>
                 <ul className="space-y-4">
                   {[
@@ -265,7 +265,7 @@ export const LandingPage = () => {
               <div className="bg-[#141414] border border-[#D4AF37]/35 rounded-[32px] p-8 space-y-6 shadow-[0_0_30px_rgba(212,175,55,0.08)]">
                 <h4 className="text-sm font-black uppercase text-[#22C55E] tracking-wider flex items-center gap-2">
                   <CheckCircle2 size={16} className="text-[#22C55E]" />
-                  With PRIME`TRADE`
+                  With LVX
                 </h4>
                 <ul className="space-y-4">
                   {[
@@ -318,7 +318,7 @@ export const LandingPage = () => {
         {/* Footer */}
         <footer className="bg-black border-t border-white/5 py-8 text-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
           <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span>© {new Date().getFullYear()} PRIME`TRADE`. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} LVX. All rights reserved.</span>
             <div className="flex gap-6">
               <a href="#" className="hover:text-zinc-400">Terms of Service</a>
               <a href="#" className="hover:text-zinc-400">Privacy Policy</a>

@@ -91,8 +91,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             letterSpacing: 1.0,
                           ),
                           children: [
-                            TextSpan(text: 'PRIME', style: TextStyle(color: Colors.white)),
-                            TextSpan(text: 'TRADE', style: TextStyle(color: AppTheme.primary)),
+                            TextSpan(text: 'LV', style: TextStyle(color: Colors.white)),
+                            TextSpan(text: 'X', style: TextStyle(color: AppTheme.primary)),
                           ],
                         ),
                       ),

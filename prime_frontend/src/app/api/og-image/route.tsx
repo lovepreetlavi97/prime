@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
            <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#000000', color: 'white', padding: '80px', fontFamily: 'sans-serif', backgroundImage: 'radial-gradient(circle at 50% 50%, #09090B 0%, #000000 100%)' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '36px', color: gold, fontWeight: '900', letterSpacing: '2px' }}>LV Prime</span>
+                  <span style={{ fontSize: '36px', color: gold, fontWeight: '900', letterSpacing: '2px' }}>LVX</span>
                   <span style={{ fontSize: '24px', color: muted, fontWeight: '700', marginTop: '10px' }}>MARKET STRUCTURE</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
                    <div style={{ width: '15px', height: '15px', borderRadius: '8px', backgroundColor: emerald }} />
                    <span style={{ fontSize: '32px', fontWeight: '900', color: emerald }}>+{growth}% PROFIT REALIZED</span>
                 </div>
-                <span style={{ fontSize: '20px', color: '#18181B', fontWeight: '900', letterSpacing: '10px' }}>LV PRECISION</span>
+                <span style={{ fontSize: '20px', color: '#18181B', fontWeight: '900', letterSpacing: '10px' }}>LVX PRECISION</span>
              </div>
            </div>
          ),
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#000000', color: 'white', padding: '80px', fontFamily: 'sans-serif', backgroundImage: 'radial-gradient(circle at 50% 50%, #09090B 0%, #000000 100%)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '36px', color: gold, fontWeight: '900', letterSpacing: '4px' }}>LV Prime</span>
+              <span style={{ fontSize: '36px', color: gold, fontWeight: '900', letterSpacing: '4px' }}>LVX</span>
               <span style={{ fontSize: '20px', color: muted, fontWeight: '700', marginTop: '10px' }}>{fullTimestamp}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>

@@ -24,6 +24,8 @@ interface SignalState {
     notifications: boolean;
   };
 
+  notifications: any[];
+  addNotification: (notification: any) => void;
   activeTab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile' | 'history';
   setActiveTab: (tab: 'home' | 'signals' | 'insights' | 'alerts' | 'profile' | 'history') => void;
 
@@ -62,6 +64,8 @@ export const useSignalStore = create<SignalState>()(
       telegramStatus: null,
       activeTab: 'home',
       homeContent: null,
+      notifications: [],
+      addNotification: (n) => set((state) => ({ notifications: [n, ...state.notifications].slice(0, 100) })),
       setActiveTab: (tab) => set({ activeTab: tab }),
       settings: {
         sound: true,
@@ -166,6 +170,14 @@ export const useSignalStore = create<SignalState>()(
           if (!signal._id) return;
           signalBuffer[signal._id] = { ...signalBuffer[signal._id], ...signal };
           queueBatch();
+          
+          get().addNotification({
+            id: `new_${signal._id}_${Date.now()}`,
+            type: 'new_signal',
+            title: `New Signal: ${signal.symbol}`,
+            message: `Entry target established at ₹${signal.entry}. Confidence Score ${signal.confidenceScore || 95}%`,
+            timestamp: new Date().toISOString()
+          });
         });
 
         socket.on('signal_status_change', (data: any) => {
@@ -184,6 +196,14 @@ export const useSignalStore = create<SignalState>()(
           if (!data._id) return;
           signalBuffer[data._id] = { ...signalBuffer[data._id], ...data };
           queueBatch();
+
+          get().addNotification({
+            id: `close_${data._id}_${Date.now()}`,
+            type: 'signal_closed',
+            title: `Signal Finalized: ${data.symbol}`,
+            message: `Trade cycle closed. Status: ${data.status}`,
+            timestamp: new Date().toISOString()
+          });
         });
 
         socket.on('market_feed', (data: any) => {
@@ -215,6 +235,14 @@ export const useSignalStore = create<SignalState>()(
           set((state) => ({
             tradingAlerts: { ...state.tradingAlerts, [alert.signalId]: alert }
           }));
+
+          get().addNotification({
+            id: `alert_${alert.signalId}_${Date.now()}`,
+            type: 'trading_alert',
+            title: alert.title || 'Trading Alert',
+            message: alert.message || alert.text,
+            timestamp: new Date().toISOString()
+          });
 
           // AUTO-DISMISS after 8 seconds
           setTimeout(() => {
@@ -294,6 +322,7 @@ export const useSignalStore = create<SignalState>()(
       partialize: (state) => ({
         user: state.user,
         settings: state.settings,
+        notifications: state.notifications,
       }),
       onRehydrateStorage: () => (state) => {
         state?.forceHydrate();

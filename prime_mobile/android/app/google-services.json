@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "229974897138",
+    "project_id": "lvprimex-cac4f",
+    "storage_bucket": "lvprimex-cac4f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229974897138:android:146333094462330ae23b6b",
+        "android_client_info": {
+          "package_name": "com.lvprimex.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMLPZAgF6uMgkfv0GFzLAwoGgftJIUrJw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

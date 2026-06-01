@@ -40,6 +40,10 @@ const startServer = async () => {
     // 5. Initialize Dhan Price Feed WebSocket - Auto-connect
     dhanWebSocket.connect();
 
+    // Start mock price service for testing/fallback in local dev
+    mockPriceService.setSocketIO(socketService.getIO());
+    mockPriceService.start();
+
     // 6. Start Listening
     await app.listen({ port: PORT, host: '0.0.0.0' });
     logger.info(`🚀 Server ready at http://localhost:${PORT}`);

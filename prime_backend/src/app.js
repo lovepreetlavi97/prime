@@ -70,7 +70,7 @@ const createApp = async () => {
     reply.header('Referrer-Policy', 'no-referrer');
     reply.header('X-XSS-Protection', '1; mode=block');
     reply.header('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
-    reply.header('Content-Security-Policy', "default-src 'self'; base-uri 'self'; font-src 'self' https: data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; script-src-attr 'none'; style-src 'self' https: 'unsafe-inline'; upgrade-insecure-requests");
+    reply.header('Content-Security-Policy', "default-src 'self'; base-uri 'self'; font-src 'self' https: data:; form-action 'self'; frame-ancestors 'none'; frame-src 'self' https://*.razorpay.com; img-src 'self' data: https://*.razorpay.com; object-src 'none'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.razorpay.com; script-src-attr 'none'; style-src 'self' https: 'unsafe-inline'; connect-src 'self' https://api.razorpay.com https://*.razorpay.com; upgrade-insecure-requests");
     return payload;
   });
 

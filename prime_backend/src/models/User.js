@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   telegramId: { type: String },
   isBanned: { type: Boolean, default: false },
   tokenVersion: { type: Number, default: 0 },
+  fcmToken: { type: String },
 }, { timestamps: true });
 
 // 🔥 SCALING INDEXES

@@ -409,7 +409,7 @@ export const LuxurySignalCard = React.memo(({ signal, index, isPro, lockedMessag
             <Clock size={10} />
             <span className="text-[9px] font-black uppercase tracking-[1px]">{formatDistanceToNow(new Date(signal.createdAt))} ago</span>
           </div>
-          <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[1px]">PRIMETRADE INTEL</span>
+          <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-[1px]">LVX INTEL</span>
         </div>
 
         {/* PREMIUM LOCK OVERLAY */}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
-import '../../core/design_system.dart';
 import '../../core/socket_service.dart';
 
 class AiInsightsScreen extends ConsumerWidget {
@@ -9,8 +8,9 @@ class AiInsightsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final niftyPrice = ref.watch(niftyPriceProvider);
-    final bankNiftyPrice = ref.watch(bankNiftyPriceProvider);
+    final priceInfo = ref.watch(livePriceInfoProvider);
+    final niftyData = priceInfo['NIFTY 50'] ?? {'price': '₹24,235.00', 'change': '+0.00%', 'isUp': true};
+    final bankNiftyData = priceInfo['BANKNIFTY'] ?? {'price': '₹51,820.00', 'change': '+0.00%', 'isUp': true};
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -78,18 +78,18 @@ class AiInsightsScreen extends ConsumerWidget {
                   Expanded(
                     child: _buildMarketCard(
                       title: 'NIFTY',
-                      price: niftyPrice,
-                      change: '+0.52%',
-                      isUp: true,
+                      price: niftyData['price'] as String? ?? '₹24,235.00',
+                      change: niftyData['change'] as String? ?? '+0.00%',
+                      isUp: niftyData['isUp'] as bool? ?? true,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildMarketCard(
                       title: 'BANKNIFTY',
-                      price: bankNiftyPrice,
-                      change: '-0.15%',
-                      isUp: false,
+                      price: bankNiftyData['price'] as String? ?? '₹51,820.00',
+                      change: bankNiftyData['change'] as String? ?? '+0.00%',
+                      isUp: bankNiftyData['isUp'] as bool? ?? true,
                     ),
                   ),
                 ],
@@ -106,7 +106,7 @@ class AiInsightsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildOptionChainCard(),
+              _buildOptionChainCard(ref),
             ],
           ),
         ),
@@ -176,7 +176,19 @@ class AiInsightsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOptionChainCard() {
+  Widget _buildOptionChainCard(WidgetRef ref) {
+    final aiSentiment = ref.watch(aiSentimentProvider);
+    
+    final double pcr = (aiSentiment?['pcrRatio'] as num?)?.toDouble() ?? 0.87;
+    final int maxPain = (aiSentiment?['maxPain'] as num?)?.toInt() ?? 24200;
+    final String expiryText = aiSentiment?['expiryText'] as String? ?? 'Expiry: Thursday';
+    final String biasText = aiSentiment?['sentiment'] as String? ?? 'Bullish Bias';
+    
+    // Determine progress bar fill factor (clamped between 0.1 and 0.9)
+    double progressPercent = (pcr - 0.5) / 1.0;
+    if (progressPercent < 0.1) progressPercent = 0.1;
+    if (progressPercent > 0.9) progressPercent = 0.9;
+
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
@@ -199,7 +211,7 @@ class AiInsightsScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                '0.87',
+                pcr.toStringAsFixed(2),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -219,19 +231,19 @@ class AiInsightsScreen extends ConsumerWidget {
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: 0.7, // Simulated fill representation
+              widthFactor: progressPercent,
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.success,
+                  color: pcr >= 1.0 ? AppTheme.success : AppTheme.warning,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Bullish Bias',
-            style: TextStyle(
+          Text(
+            biasText,
+            style: const TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.bold,
@@ -252,7 +264,7 @@ class AiInsightsScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                '24,200',
+                maxPain == 24200 ? '24,200' : maxPain.toString(),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -262,9 +274,9 @@ class AiInsightsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Expiry: Thursday',
-            style: TextStyle(
+          Text(
+            expiryText,
+            style: const TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.bold,

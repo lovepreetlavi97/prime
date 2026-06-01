@@ -13,8 +13,18 @@ class AdminService {
       User.countDocuments({ role: 'USER' }),
     ]);
 
-    // Mock revenue for now
-    const revenue = 125000; 
+    // Calculate actual active subscription revenue dynamically from active users
+    const premiumUsers = await User.find({
+      role: 'USER',
+      'subscription.isActive': true,
+      'subscription.plan': { $in: ['pro', 'elite'] }
+    }).select('subscription.plan').lean();
+
+    let revenue = 0;
+    premiumUsers.forEach(u => {
+      if (u.subscription.plan === 'pro') revenue += 1999;
+      else if (u.subscription.plan === 'elite') revenue += 4999;
+    });
 
     return {
       activeSignals,

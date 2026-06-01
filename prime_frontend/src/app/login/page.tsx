@@ -119,10 +119,10 @@ export default function LoginPage() {
         {/* LOGO */}
         <div className="flex items-center gap-2.5 mb-8 select-none">
           <div className="w-8 h-8 rounded-full bg-[#D4AF37] font-black text-black text-base flex items-center justify-center font-sans">
-            P
+            L
           </div>
           <span className="text-xl font-bold tracking-[1px] text-white">
-            PRIME<span className="text-[#D4AF37]">TRADE</span>
+            LV<span className="text-[#D4AF37]">X</span>
           </span>
         </div>
 

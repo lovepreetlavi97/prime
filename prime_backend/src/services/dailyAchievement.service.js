@@ -112,7 +112,7 @@ Our AI-powered signal just delivered massive results! 💎
 
 Swipe left to see the performance chart! 📊 ⬅️
 
-Precision analysis. Maximum profit. This is the power of Prime Trading Terminal. ⚡
+Precision analysis. Maximum profit. This is the power of LVX Trading Terminal. ⚡
 
 Join our premium community to get these signals in real-time. (Link in Bio) 🔗
 

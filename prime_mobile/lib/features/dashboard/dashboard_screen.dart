@@ -1,15 +1,16 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme.dart';
 import '../../core/design_system.dart';
 import '../../core/socket_service.dart';
+import '../../shared/navigation/custom_bottom_navigation.dart';
+import '../../shared/navigation/navigation_item.dart';
 import '../signals/signals_list_view.dart';
 import '../ai_insights/ai_insights_screen.dart';
 import '../profile/profile_screen.dart';
 import '../profile/subscription_plans_screen.dart';
 import '../notifications/notification_center_screen.dart';
-import '../watchlist/watchlist_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -26,7 +27,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     // Initialize sockets when app starts
-    Future.microtask(() => ref.read(socketServiceProvider).init(ref));
+    Future.microtask(() => ref.read(socketServiceProvider).init());
   }
 
   @override
@@ -36,14 +37,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _onTabChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    if (_currentIndex != index) {
+      setState(() {
+        _currentIndex = index;
+      });
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
@@ -53,80 +56,70 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: SafeArea(
         child: PageView(
           controller: _pageController,
+          onPageChanged: (index) {
+            if (_currentIndex != index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            }
+          },
+          // NeverScrollableScrollPhysics: prevents PageView from consuming
+          // vertical drag gestures, allowing RefreshIndicator inside tabs to work
           physics: const NeverScrollableScrollPhysics(),
-          children: [
-            const HomeTabView(),
-            const SignalsListView(),
-            const AiInsightsScreen(),
-            const NotificationCenterScreen(),
-            const ProfileScreen(),
+          children: const [
+            HomeTabView(),
+            SignalsListView(),
+            AiInsightsScreen(),
+            NotificationCenterScreen(),
+            ProfileScreen(),
           ],
         ),
       ),
       bottomNavigationBar: Container(
-        height: 72,
         decoration: BoxDecoration(
           color: AppTheme.secondaryBackground.withValues(alpha: 0.95),
           border: const Border(
             top: BorderSide(color: AppTheme.surfaceHighlight, width: 1.2),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home_filled, 'Home', 0),
-            _buildNavItem(Icons.radar_outlined, 'Live', 1),
-            _buildNavItem(Icons.insights_outlined, 'Market', 2),
-            _buildNavItem(Icons.notifications_none_rounded, 'Alerts', 3),
-            _buildNavItem(Icons.person_outline, 'Profile', 4),
-          ],
+        child: SafeArea(
+          top: false,
+          child: CustomBottomNavigation(
+            pageController: _pageController,
+            selectedIndex: _currentIndex,
+            onItemSelected: _onTabChanged,
+            activeColor: AppTheme.primary,
+            inactiveColor: AppTheme.textSecondary,
+            items: const [
+              NavigationItem(
+                filledIcon: Icons.home_filled,
+                outlinedIcon: Icons.home_outlined,
+                label: 'Home',
+              ),
+              NavigationItem(
+                filledIcon: Icons.radar,
+                outlinedIcon: Icons.radar_outlined,
+                label: 'Live',
+              ),
+              NavigationItem(
+                filledIcon: Icons.insights,
+                outlinedIcon: Icons.insights_outlined,
+                label: 'Market',
+              ),
+              NavigationItem(
+                filledIcon: Icons.notifications_rounded,
+                outlinedIcon: Icons.notifications_none_rounded,
+                label: 'Alerts',
+              ),
+              NavigationItem(
+                filledIcon: Icons.person,
+                outlinedIcon: Icons.person_outline,
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final bool isActive = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => _onTabChanged(index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: isActive ? AppTheme.primary.withValues(alpha: 0.08) : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: isActive ? AppTheme.primary : AppTheme.textSecondary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              color: isActive ? AppTheme.primary : AppTheme.textSecondary,
-              letterSpacing: 0.5,
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _showAiCopilotDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => const AiCopilotSheet(),
     );
   }
 }
@@ -196,7 +189,7 @@ class _AiCopilotSheetState extends State<AiCopilotSheet> {
                     decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 8),
-                  const Text('PRIMETRADE AI COPILOT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  const Text('LVX AI COPILOT', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                 ],
               ),
               IconButton(
@@ -264,19 +257,40 @@ class _AiCopilotSheetState extends State<AiCopilotSheet> {
 }
 
 /// HOME DASHBOARD SUB-VIEW
-class HomeTabView extends ConsumerWidget {
+class HomeTabView extends ConsumerStatefulWidget {
   const HomeTabView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final niftyPrice = ref.watch(niftyPriceProvider);
-    final bankNiftyPrice = ref.watch(bankNiftyPriceProvider);
+  ConsumerState<HomeTabView> createState() => _HomeTabViewState();
+}
+
+class _HomeTabViewState extends ConsumerState<HomeTabView> {
+  final GlobalKey<RefreshIndicatorState> _refreshKey = GlobalKey<RefreshIndicatorState>();
+
+  Future<void> _onRefresh() async {
+    final baseUrl = ref.read(backendUrlProvider);
+    final prefs = await SharedPreferences.getInstance();
+    final String? token = prefs.getString('auth_token');
+
+    await ref.read(socketServiceProvider).fetchHomeContent(baseUrl);
+    await ref.read(socketServiceProvider).fetchInitialSignals(baseUrl);
+    await ref.read(socketServiceProvider).fetchAiSentiment(baseUrl);
+    if (token != null) {
+      await ref.read(socketServiceProvider).fetchUserProfile(baseUrl, token);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final priceInfo = ref.watch(livePriceInfoProvider);
+    final niftyData = priceInfo['NIFTY 50'] ?? {'price': '₹24,235.00', 'change': '+0.00%', 'isUp': true};
+    final bankNiftyData = priceInfo['BANKNIFTY'] ?? {'price': '₹51,820.00', 'change': '+0.00%', 'isUp': true};
     
     final String userTier = ref.watch(userTierProvider);
     final bool isElite = userTier == 'pro';
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -293,8 +307,8 @@ class HomeTabView extends ConsumerWidget {
                   letterSpacing: 1.5,
                 ),
                 children: [
-                  TextSpan(text: 'PRIME', style: TextStyle(color: Colors.white)),
-                  TextSpan(text: 'TRADE', style: TextStyle(color: AppTheme.primary)),
+                  TextSpan(text: 'LV', style: TextStyle(color: Colors.white)),
+                  TextSpan(text: 'X', style: TextStyle(color: AppTheme.primary)),
                 ],
               ),
             ),
@@ -329,46 +343,53 @@ class HomeTabView extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // INDEX TICKERS ROW
-            Row(
-              children: [
-                Expanded(
-                  child: _buildIndexCard(
-                    title: 'NIFTY',
-                    price: niftyPrice,
-                    change: '+0.52%',
-                    isUp: true,
+      body: RefreshIndicator(
+        key: _refreshKey,
+        color: AppTheme.primary,
+        backgroundColor: AppTheme.secondaryBackground,
+        displacement: 60,
+        onRefresh: _onRefresh,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // INDEX TICKERS ROW
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildIndexCard(
+                      title: 'NIFTY',
+                      price: niftyData['price'] as String? ?? '₹24,235.00',
+                      change: niftyData['change'] as String? ?? '+0.00%',
+                      isUp: niftyData['isUp'] as bool? ?? true,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildIndexCard(
-                    title: 'BANKNIFTY',
-                    price: bankNiftyPrice,
-                    change: '-0.15%',
-                    isUp: false,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildIndexCard(
+                      title: 'BANKNIFTY',
+                      price: bankNiftyData['price'] as String? ?? '₹51,820.00',
+                      change: bankNiftyData['change'] as String? ?? '+0.00%',
+                      isUp: bankNiftyData['isUp'] as bool? ?? true,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // CONDITIONAL VIEW BASED ON TIER
-            if (!isElite) ...[
-              _buildPremiumAccessCard(context),
-            ] else ...[
-              _buildAiGuidanceCard(),
+                ],
+              ),
               const SizedBox(height: 24),
-              _buildLastSignalResultCard(),
+  
+              // CONDITIONAL VIEW BASED ON TIER
+              if (!isElite) ...[
+                _buildPremiumAccessCard(context),
+              ] else ...[
+                _buildAiGuidanceCard(),
+                const SizedBox(height: 24),
+                _buildLastSignalResultCard(),
+              ],
+              const SizedBox(height: 24),
             ],
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     );
@@ -382,7 +403,7 @@ class HomeTabView extends ConsumerWidget {
   }) {
     final Color color = isUp ? AppTheme.success : AppTheme.error;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.secondaryBackground,
         borderRadius: BorderRadius.circular(16),
@@ -399,41 +420,45 @@ class HomeTabView extends ConsumerWidget {
             size: 18,
           ),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textSecondary,
-                  letterSpacing: 0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textSecondary,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    price,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                const SizedBox(height: 4),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    change,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      change,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -563,6 +588,13 @@ class HomeTabView extends ConsumerWidget {
   }
 
   Widget _buildAiGuidanceCard() {
+    final homeContent = ref.watch(homeContentProvider);
+    final List<dynamic> guidanceList = homeContent?['guidance'] ?? [
+      'Wait for the entry zone',
+      'Do not chase price after breakout',
+      'Always respect stop loss',
+    ];
+
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
@@ -595,11 +627,14 @@ class HomeTabView extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _buildGuidanceBullet('Do not chase above 130 — wait for pullback'),
-          const SizedBox(height: 12),
-          _buildGuidanceBullet('Strong support holding at 24100'),
-          const SizedBox(height: 12),
-          _buildGuidanceBullet('Volume confirms breakout structure'),
+          ...guidanceList.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final text = entry.value.toString();
+            return Padding(
+              padding: EdgeInsets.only(bottom: idx == guidanceList.length - 1 ? 0 : 12.0),
+              child: _buildGuidanceBullet(text),
+            );
+          }),
         ],
       ),
     );
@@ -634,6 +669,38 @@ class HomeTabView extends ConsumerWidget {
   }
 
   Widget _buildLastSignalResultCard() {
+    final allSignals = ref.watch(signalsListProvider);
+    final closedSignals = allSignals.where((s) => s.isClosed).toList();
+    
+    String signalName = 'NIFTY 24200 CE';
+    String changeStr = '+78%';
+    String durationStr = 'in 6 minutes';
+    bool isProfit = true;
+    
+    if (closedSignals.isNotEmpty) {
+      final lastSignal = closedSignals.first;
+      signalName = '${lastSignal.symbol} ${lastSignal.strike}';
+      
+      if (lastSignal.entry > 0) {
+        final change = ((lastSignal.exitPrice ?? lastSignal.entry) - lastSignal.entry) / lastSignal.entry * 100;
+        changeStr = '${change >= 0 ? "+" : ""}${change.toStringAsFixed(1)}%';
+      }
+      durationStr = lastSignal.time;
+      if (durationStr == 'Live Now') durationStr = 'Completed';
+      isProfit = lastSignal.isProfit;
+    } else {
+      final homeContent = ref.watch(homeContentProvider);
+      if (homeContent != null && homeContent['lastSignal'] != null) {
+        signalName = 'Recent Completed Setup';
+        changeStr = '+78%';
+        durationStr = homeContent['lastSignal'].toString();
+      }
+    }
+
+    final cardBgColor = isProfit ? const Color(0xFF0C1912) : const Color(0xFF190C0C);
+    final cardBorderColor = isProfit ? const Color(0xFF1B3D2B) : const Color(0xFF3D1B1B);
+    final textColor = isProfit ? AppTheme.success : AppTheme.error;
+
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
@@ -646,7 +713,11 @@ class HomeTabView extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.trending_up_rounded, color: AppTheme.success, size: 20),
+              Icon(
+                isProfit ? Icons.trending_up_rounded : Icons.trending_down_rounded, 
+                color: textColor, 
+                size: 20
+              ),
               const SizedBox(width: 12),
               const Text(
                 'Last Signal Result',
@@ -663,33 +734,33 @@ class HomeTabView extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: const Color(0xFF0C1912), // Dark greenish background
+              color: cardBgColor, // Dark greenish or reddish background
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1B3D2B)),
+              border: Border.all(color: cardBorderColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'NIFTY 24200 CE',
-                  style: TextStyle(
+                Text(
+                  signalName,
+                  style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  '+78%',
+                Text(
+                  changeStr,
                   style: TextStyle(
-                    color: AppTheme.success,
+                    color: textColor,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'in 6 minutes',
+                  durationStr,
                   style: TextStyle(
                     color: AppTheme.textSecondary.withValues(alpha: 0.6),
                     fontSize: 10,

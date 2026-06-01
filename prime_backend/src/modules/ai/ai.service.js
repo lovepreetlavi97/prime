@@ -16,6 +16,9 @@ class AiService {
       sentiment: 'BULLISH',
       reasoning: 'Strong volume expansion above VWAP. Banking sector showing strength.',
       confidence: 85,
+      pcrRatio: 0.94,
+      maxPain: 24200,
+      expiryText: 'Expiry: Thursday, May 28',
       timestamp: new Date()
     };
 
