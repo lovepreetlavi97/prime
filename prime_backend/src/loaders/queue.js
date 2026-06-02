@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import logger from '../utils/logger.js';
 import signalMatcher from '../services/dhan/dhanSignalMatcher.js';
+import { isDhanAvailable } from '../services/dhan/dhanApiClient.js';
 
 // Keep track of last seen symbol/strike/optionType per channel source for fallback context
 const sourceContextCache = new Map();
@@ -215,12 +216,30 @@ export const startWorkers = () => {
           return;
         }
 
-        // Match with Dhan Live technical Indicators & Scalper bias
-        const matchingResults = signalMatcher.matchAndSecure(finalData, rawText);
-        const enrichedData = {
-          ...finalData,
-          ...matchingResults
-        };
+        // Match with Dhan Live technical Indicators & Scalper bias or apply FALLBACK MODE
+        let enrichedData;
+        if (!isDhanAvailable()) {
+          logger.warn(`[Worker] Dhan API OFFLINE — applying FALLBACK_MODE for ${finalData.symbol}`);
+          enrichedData = {
+            ...finalData,
+            verificationStatus: 'UNVERIFIED',
+            confidenceScore: 'N/A',
+            rating: 'UNVERIFIED',
+            trend: 'NEUTRAL',
+            rsi: 50,
+            aiScore: 0,
+            aiSentiment: 'Neutral',
+            aiRationale: 'This signal was received from Telegram but could not be verified using live market data. Trade with caution until verification becomes available.',
+            guidance: 'Dhan API currently offline. Market verification could not be completed.'
+          };
+        } else {
+          const matchingResults = signalMatcher.matchAndSecure(finalData, rawText);
+          enrichedData = {
+            ...finalData,
+            ...matchingResults,
+            verificationStatus: 'VERIFIED'
+          };
+        }
 
         // 3. Persist to DB
         const saved = await signalsService.createSignal(rawText, source, {

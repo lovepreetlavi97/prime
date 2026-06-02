@@ -320,6 +320,54 @@ class SignalsService {
       totalSignals: allSignals.length
     };
   }
+
+  async autoReverifyPendingSignals() {
+    try {
+      const pending = await Signal.find({ verificationStatus: 'UNVERIFIED' });
+      if (pending.length === 0) return;
+
+      console.log(`[Signals] 🔄 Dhan API recovered. Re-verifying ${pending.length} pending signals...`);
+
+      const { default: signalMatcher } = await import('../../services/dhan/dhanSignalMatcher.js');
+
+      for (const sig of pending) {
+        try {
+          const result = await signalMatcher.verifySignal({
+            symbol: sig.symbol,
+            strike: sig.strike,
+            optionType: sig.optionType,
+            entry: sig.entry,
+            sl: sig.sl,
+            targets: sig.targets
+          });
+
+          if (result && !result.FALLBACK_MODE) {
+            // Update the signal with verified data
+            sig.verificationStatus = 'VERIFIED';
+            sig.confidenceScore = result.confidenceScore;
+            sig.rating = result.confidenceScore >= 90 ? 'PREMIUM' : 'STRONG';
+            sig.aiRationale = result.reasons?.supporting?.join('. ') || 'Signal verified against live market data.';
+            sig.guidance = result.verdict || 'High-probability trade verified.';
+            sig.trend = result.marketTrend || 'NEUTRAL';
+            sig.rsi = result.rsi || 50;
+            sig.aiScore = result.confidenceScore;
+            sig.aiSentiment = result.verdict?.includes('STRONG') ? 'BULLISH' : 'Neutral';
+            
+            await sig.save();
+            
+            // Broadcast the update via socket
+            socketService.emitGlobal('update_signal', sig);
+            
+            console.log(`[Signals] ✅ Signal ${sig.symbol} auto-reverified successfully. Confidence: ${sig.confidenceScore}%`);
+          }
+        } catch (err) {
+          console.error(`[Signals] Failed to auto-reverify signal ${sig._id}:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error('[Signals] Error in autoReverifyPendingSignals:', err.message);
+    }
+  }
 }
 
 export default new SignalsService();

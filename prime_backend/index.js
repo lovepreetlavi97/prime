@@ -10,6 +10,8 @@ import mockPriceService from './src/services/mockPriceService.js';
 import instrumentService from './src/services/instrument.service.js';
 import { startWorkers } from './src/loaders/queue.js';
 import uwsLoader from './src/loaders/uws.js';
+import { onDhanRecovery } from './src/services/dhan/dhanApiClient.js';
+import signalsService from './src/modules/signals/signals.service.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -17,6 +19,13 @@ const startServer = async () => {
   try {
     // 1. Initialize Database
     await connectDB();
+
+    // Register Dhan API recovery handler for pending unverified signals
+    onDhanRecovery(() => {
+      signalsService.autoReverifyPendingSignals().catch(err => {
+        logger.error(`[DhanRecovery] Failed to auto-reverify pending: ${err.message}`);
+      });
+    });
 
     // 2. Initialize Instruments (Dhan Scrip Master)
     await instrumentService.init();

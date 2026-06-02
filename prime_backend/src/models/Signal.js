@@ -13,7 +13,8 @@ const signalSchema = new mongoose.Schema({
   aiScore: { type: Number, default: 0 },
   aiSentiment: { type: String, default: 'Neutral' },
   aiRationale: { type: String, default: 'Analyzing Market Dynamics...' },
-  confidenceScore: { type: Number, default: 0 },
+  confidenceScore: { type: mongoose.Schema.Types.Mixed, default: 0 },
+  verificationStatus: { type: String, default: 'VERIFIED' },
   rating: { type: String, default: 'WEAK' }, // WEAK, MEDIUM, STRONG, PREMIUM
   trend: { type: String, default: 'NEUTRAL' }, // UP, DOWN, NEUTRAL
   rsi: { type: Number, default: 0 },
