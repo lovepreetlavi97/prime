@@ -15,6 +15,7 @@ import {
   Crown,
   Zap,
   ArrowRight,
+  BrainCircuit,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -22,6 +23,22 @@ export default function Dashboard() {
   const { signals, user } = useSignalStore();
   const [stats, setStats] = useState({ successRate: "94.2", totalSignals: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [aiStatus, setAiStatus] = useState<"scanning" | "found">("scanning");
+
+  useEffect(() => {
+    if (signals.length === 0) return;
+    const latestSignal = signals[0];
+    if (latestSignal) {
+      const isNew = Date.now() - new Date(latestSignal.createdAt || latestSignal.lastUpdateAt || Date.now()).getTime() < 15000;
+      if (isNew) {
+        setAiStatus("found");
+        const timer = setTimeout(() => {
+          setAiStatus("scanning");
+        }, 8000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [signals]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -72,6 +89,59 @@ export default function Dashboard() {
             <GoldButton variant="glow" size="sm" onClick={() => router.push("/signals")}>
               Go to Live Feed <Zap size={14} className="ml-1" />
             </GoldButton>
+          </div>
+        </div>
+
+        {/* Premium AI Activity Card */}
+        <div className={`p-5 rounded-3xl transition-all duration-700 relative overflow-hidden ${
+          aiStatus === "found" 
+            ? "bg-emerald-950/20 border-emerald-500/30 shadow-[0_0_30px_rgba(34,197,94,0.15)] animate-[pulse_2s_infinite]" 
+            : "bg-[#0e0e12]/60 border-white/[0.04]"
+        } border backdrop-blur-xl`}>
+          {/* Shimmer Effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-4">
+              {/* Subtle Glowing AI Icon */}
+              <div className="relative flex items-center justify-center">
+                {/* Glow rings */}
+                <div className={`absolute inset-0 rounded-full blur-md opacity-40 transition-all duration-700 ${
+                  aiStatus === "found" ? "bg-emerald-500 scale-125" : "bg-[#D4AF37] scale-110"
+                }`} />
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-700 ${
+                  aiStatus === "found" 
+                    ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400" 
+                    : "bg-[#14141a] border-white/[0.08] text-[#D4AF37]"
+                }`}>
+                  <BrainCircuit className={`w-5 h-5 ${aiStatus === "found" ? "animate-bounce" : "animate-pulse"}`} />
+                </div>
+              </div>
+              
+              {/* Live Status Text */}
+              <div className="text-center sm:text-left">
+                <h3 className={`text-sm font-black font-outfit uppercase tracking-widest transition-all duration-500 ${
+                  aiStatus === "found" ? "text-emerald-400" : "text-white"
+                }`}>
+                  {aiStatus === "found" ? "⚡ Setup Found" : "🤖 AI Analyzing Market..."}
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5 font-medium">
+                  {aiStatus === "found" ? "New trading setup detected and broadcasted to terminal." : "Scanning options order book and smart money flow..."}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Next Signal Indicator */}
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/[0.04]">
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  aiStatus === "found" ? "bg-emerald-500 animate-ping" : "bg-[#D4AF37] animate-pulse"
+                }`} />
+                <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                  {aiStatus === "found" ? "Signal Found" : "Next Signal Can Arrive Anytime"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

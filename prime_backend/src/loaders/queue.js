@@ -10,6 +10,9 @@ import path from 'path';
 import logger from '../utils/logger.js';
 import signalMatcher from '../services/dhan/dhanSignalMatcher.js';
 
+// Keep track of last seen symbol/strike/optionType per channel source for fallback context
+const sourceContextCache = new Map();
+
 // 🔥 PROD QUEUES
 export const ingestionQueue = new Queue('ingestion-queue', { 
   connection: queue,
@@ -176,6 +179,33 @@ export const startWorkers = () => {
             });
           } else {
             logger.info(`[Worker] ⏭️ Skipping tiny media asset (${buffer.length} bytes)`);
+          }
+        }
+
+        // Context Cache Logic: If symbol exists, update cache. Otherwise, fallback to cached symbol.
+        if (finalData.symbol) {
+          sourceContextCache.set(source, {
+            symbol: finalData.symbol,
+            strike: finalData.strike,
+            optionType: finalData.optionType,
+            timestamp: Date.now()
+          });
+        } else {
+          const cached = sourceContextCache.get(source);
+          if (cached && (Date.now() - cached.timestamp < 10 * 60 * 1000)) { // 10 minutes window
+            finalData.symbol = cached.symbol;
+            if (!finalData.strike) finalData.strike = cached.strike;
+            if (finalData.optionType === 'NONE' || !finalData.optionType) {
+              finalData.optionType = cached.optionType;
+              finalData.type = cached.optionType === 'CE' ? 'BUY' : 'SELL';
+            }
+            logger.info(`[Worker] 🔄 Context recovered for missing symbol from cache: ${finalData.symbol}`);
+          } else {
+            // Ultimate fallback to NIFTY CE if no cached context is available
+            finalData.symbol = 'NIFTY';
+            finalData.optionType = 'CE';
+            finalData.type = 'BUY';
+            logger.info(`[Worker] 🔄 No context cache found, defaulting missing symbol to NIFTY`);
           }
         }
 

@@ -47,3 +47,42 @@ export const sendPushNotification = async (token, payload) => {
     logger.error(`❌ [Firebase] Error sending push notification: ${err.message}`);
   }
 };
+
+export const sendPushNotificationToAllUsers = async (payload) => {
+  try {
+    const User = (await import('../models/User.js')).default;
+    const users = await User.find({ fcmToken: { $ne: null, $exists: true } }, 'fcmToken').lean();
+    const tokens = users.map(u => u.fcmToken).filter(Boolean);
+
+    if (tokens.length === 0) {
+      logger.info('[Firebase] No users with FCM tokens found.');
+      return;
+    }
+
+    logger.info(`[Firebase] Sending push notification to ${tokens.length} users...`);
+
+    if (!messaging) {
+      logger.info(`[Firebase Mock Multicast] Would send to ${tokens.length} tokens: ${JSON.stringify(payload)}`);
+      return;
+    }
+
+    // Firebase sendEachForMulticast accepts up to 500 tokens per batch
+    const batchSize = 500;
+    for (let i = 0; i < tokens.length; i += batchSize) {
+      const batchTokens = tokens.slice(i, i + batchSize);
+      const message = {
+        tokens: batchTokens,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: payload.data || {},
+      };
+      
+      const response = await messaging.sendEachForMulticast(message);
+      logger.info(`✅ [Firebase] Multicast batch sent: ${response.successCount} success, ${response.failureCount} failed.`);
+    }
+  } catch (err) {
+    logger.error(`❌ [Firebase] Error sending multicast notification: ${err.message}`);
+  }
+};

@@ -29,7 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final String currentUrl = prefs.getString('backend_url') ?? 'http://192.168.1.15:4000';
+    final String currentUrl = prefs.getString('backend_url') ?? 'http://192.168.1.9:4000';
     setState(() {
       _urlController.text = currentUrl;
     });
@@ -110,7 +110,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Configure local IP (e.g. 192.168.1.15:4000) for physical device testing.',
+                  'Configure local IP (e.g. 192.168.1.9:4000) for physical device testing.',
                   style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.8), fontSize: 10),
                 ),
                 const SizedBox(height: 12),

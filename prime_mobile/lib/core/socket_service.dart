@@ -38,7 +38,7 @@ final notificationsProvider = StateProvider<List<Map<String, dynamic>>>((ref) =>
 
 // State providers for live data synchronization
 final signalsListProvider = StateProvider<List<SignalData>>((ref) => []);
-final backendUrlProvider = StateProvider<String>((ref) => 'http://192.168.1.15:4000'); // Default to local host machine IP
+final backendUrlProvider = StateProvider<String>((ref) => 'http://192.168.1.9:4000'); // Default to local host machine IP
 final packagesListProvider = StateProvider<List<dynamic>>((ref) => []);
 
 
@@ -50,9 +50,9 @@ class SocketService {
 
   void init() async {
     final prefs = await SharedPreferences.getInstance();
-    String savedUrl = prefs.getString('backend_url') ?? 'http://192.168.1.15:4000';
-    if (savedUrl.contains('localhost') || savedUrl.contains('10.0.2.2')) {
-      savedUrl = 'http://192.168.1.15:4000';
+    String savedUrl = prefs.getString('backend_url') ?? 'http://192.168.1.9:4000';
+    if (savedUrl.contains('localhost') || savedUrl.contains('10.0.2.2') || savedUrl.contains('192.168.1.15')) {
+      savedUrl = 'http://192.168.1.9:4000';
       await prefs.setString('backend_url', savedUrl);
     }
     ref.read(backendUrlProvider.notifier).state = savedUrl;
@@ -415,13 +415,14 @@ class SocketService {
       entry: (json['entry'] as num?)?.toDouble() ?? 0.0,
       target: targetVal,
       stopLoss: (json['sl'] as num?)?.toDouble() ?? 0.0,
-      confidence: json['confidenceScore'] ?? 90,
+      confidence: (json['confidenceScore'] as num?)?.toInt() ?? 90,
       riskLevel: json['rating'] ?? risk,
       time: 'Live Now',
       reasoning: json['aiRationale'] ?? json['rawText'] ?? 'AI confirmation secured.',
       isClosed: isClosed,
       isProfit: isProfit,
       exitPrice: (json['currentPrice'] as num?)?.toDouble() ?? (json['entry'] as num?)?.toDouble() ?? 0.0,
+      source: json['source'] ?? 'TELEGRAM',
     );
   }
 }

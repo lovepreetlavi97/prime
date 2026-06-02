@@ -275,6 +275,7 @@ class SignalData {
   final bool isClosed;
   final bool isProfit;
   final double? exitPrice;
+  final String source;
 
   SignalData({
     required this.id,
@@ -291,5 +292,6 @@ class SignalData {
     this.isClosed = false,
     this.isProfit = false,
     this.exitPrice,
+    this.source = 'TELEGRAM',
   });
 }

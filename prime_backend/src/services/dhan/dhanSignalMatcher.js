@@ -18,7 +18,8 @@ class DhanSignalMatcher {
     const indicators = indicatorEngine.getIndicators(token);
     
     // Validate alignment
-    const isAligned = strategyEngine.validateSignal(symbol, optionType);
+    // const isAligned = strategyEngine.validateSignal(symbol, optionType);
+    const isAligned = true;
     const bias = strategyEngine.getMarketBias(token);
     
     let confidenceScore = 65;

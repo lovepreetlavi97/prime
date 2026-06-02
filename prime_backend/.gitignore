@@ -14,6 +14,7 @@
 *.cert
 *.pfx
 *.p12
+firebase-service-account.json
 
 # 2. Package Managers & Dependency Directories
 node_modules/

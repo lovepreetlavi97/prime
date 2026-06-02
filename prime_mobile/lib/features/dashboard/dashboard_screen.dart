@@ -7,9 +7,9 @@ import '../../core/socket_service.dart';
 import '../../shared/navigation/custom_bottom_navigation.dart';
 import '../../shared/navigation/navigation_item.dart';
 import '../signals/signals_list_view.dart';
+import '../signals/signal_detail_view.dart';
 import '../ai_insights/ai_insights_screen.dart';
 import '../profile/profile_screen.dart';
-import '../profile/subscription_plans_screen.dart';
 import '../notifications/notification_center_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -256,6 +256,244 @@ class _AiCopilotSheetState extends State<AiCopilotSheet> {
   }
 }
 
+/// 🤖 PREMIUM AI ACTIVITY CARD
+class AiActivityCard extends ConsumerStatefulWidget {
+  const AiActivityCard({super.key});
+
+  @override
+  ConsumerState<AiActivityCard> createState() => _AiActivityCardState();
+}
+
+class _AiActivityCardState extends ConsumerState<AiActivityCard> with TickerProviderStateMixin {
+  String _aiStatus = 'scanning'; // 'scanning' or 'found'
+  late AnimationController _pulseController;
+  late AnimationController _shimmerController;
+  String? _lastSignalId;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen to signals list to detect new signals
+    ref.listen<List<SignalData>>(signalsListProvider, (previous, next) {
+      if (next.isNotEmpty) {
+        final latestId = next.first.id;
+        if (_lastSignalId != null && latestId != _lastSignalId) {
+          // New signal detected!
+          setState(() {
+            _aiStatus = 'found';
+          });
+          Future.delayed(const Duration(seconds: 8), () {
+            if (mounted) {
+              setState(() {
+                _aiStatus = 'scanning';
+              });
+            }
+          });
+        }
+        _lastSignalId = latestId;
+      }
+    });
+
+    // Initialize _lastSignalId on first build
+    if (_lastSignalId == null && ref.read(signalsListProvider).isNotEmpty) {
+      _lastSignalId = ref.read(signalsListProvider).first.id;
+    }
+
+    final bool isFound = _aiStatus == 'found';
+    final Color activeColor = isFound ? AppTheme.success : AppTheme.primary;
+    final Color borderColor = isFound ? AppTheme.success.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05);
+    final Color bgColor = isFound ? AppTheme.success.withValues(alpha: 0.05) : AppTheme.secondaryBackground;
+
+    Widget iconGlow = AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        double scale = 1.0 + (_pulseController.value * 0.25);
+        double opacity = 0.4 - (_pulseController.value * 0.3);
+        return Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: activeColor.withValues(alpha: opacity),
+          ),
+          transform: Matrix4.identity()..scale(scale),
+          transformAlignment: Alignment.center,
+        );
+      },
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isFound
+            ? [
+                BoxShadow(
+                  color: AppTheme.success.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                )
+              ]
+            : null,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // Moving Shimmer Effect
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _shimmerController,
+              builder: (context, child) {
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment(-2.0 + (_shimmerController.value * 4), -1.0),
+                      end: Alignment(-1.0 + (_shimmerController.value * 4), 1.0),
+                      colors: [
+                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.01),
+                        Colors.white.withValues(alpha: 0.03),
+                        Colors.white.withValues(alpha: 0.01),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.45, 0.5, 0.55, 1.0],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Content Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                // Glowing Icon
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    iconGlow,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withValues(alpha: 0.4),
+                        border: Border.all(
+                          color: activeColor.withValues(alpha: 0.2),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        isFound ? Icons.bolt_rounded : Icons.psychology_rounded,
+                        color: activeColor,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                
+                // Status Text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isFound ? '⚡ SETUP FOUND' : '🤖 AI ANALYZING MARKET',
+                        style: TextStyle(
+                          color: isFound ? AppTheme.success : Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isFound
+                            ? 'New trading setup broadcasted to all terminal nodes.'
+                            : 'Scanning options order book and smart money flow...',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Next Signal Tag
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Pulsing tiny dot
+                      AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) {
+                          double opacity = 0.5 + (_pulseController.value * 0.5);
+                          return Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: activeColor.withValues(alpha: opacity),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isFound ? 'ACTIVE' : 'NEXT ANYTIME',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// HOME DASHBOARD SUB-VIEW
 class HomeTabView extends ConsumerStatefulWidget {
   const HomeTabView({super.key});
@@ -280,14 +518,15 @@ class _HomeTabViewState extends ConsumerState<HomeTabView> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final priceInfo = ref.watch(livePriceInfoProvider);
     final niftyData = priceInfo['NIFTY 50'] ?? {'price': '₹24,235.00', 'change': '+0.00%', 'isUp': true};
     final bankNiftyData = priceInfo['BANKNIFTY'] ?? {'price': '₹51,820.00', 'change': '+0.00%', 'isUp': true};
-    
-    final String userTier = ref.watch(userTierProvider);
-    final bool isElite = userTier == 'pro';
+
+    final allSignals = ref.watch(signalsListProvider);
+    final telegramSignals = allSignals.where((s) => s.source.toUpperCase() != 'ALGO' && s.source.toUpperCase() != 'SYSTEM').toList();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -378,20 +617,205 @@ class _HomeTabViewState extends ConsumerState<HomeTabView> {
                 ],
               ),
               const SizedBox(height: 24),
-  
-              // CONDITIONAL VIEW BASED ON TIER
-              if (!isElite) ...[
-                _buildPremiumAccessCard(context),
-              ] else ...[
-                _buildAiGuidanceCard(),
-                const SizedBox(height: 24),
-                _buildLastSignalResultCard(),
-              ],
+
+              // AI ACTIVITY CARD
+              const AiActivityCard(),
               const SizedBox(height: 24),
+
+              // TELEGRAM SIGNALS SECTION
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'TELEGRAM INTELLIGENCE',
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0088cc).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF0088cc).withValues(alpha: 0.2), width: 1.2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.send_rounded, color: Color(0xFF0088cc), size: 10),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'LIVE CHANNEL',
+                          style: TextStyle(
+                            color: Color(0xFF0088cc),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              if (telegramSignals.isEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryBackground,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.send_rounded,
+                        color: const Color(0xFF0088cc).withValues(alpha: 0.3),
+                        size: 32,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Scanning priority Telegram channels...',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                ...telegramSignals.take(3).map((signal) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => SignalDetailView(signal: signal)),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secondaryBackground,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: signal.isClosed
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : AppTheme.primary.withValues(alpha: 0.15),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      signal.symbol,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: (signal.strike.contains('CE') ? AppTheme.success : AppTheme.error).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        signal.strike,
+                                        style: TextStyle(
+                                          color: signal.strike.contains('CE') ? AppTheme.success : AppTheme.error,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  signal.isClosed 
+                                      ? (signal.isProfit ? 'PROFIT' : 'SL HIT')
+                                      : 'ACTIVE',
+                                  style: TextStyle(
+                                    color: signal.isClosed
+                                        ? (signal.isProfit ? AppTheme.success : AppTheme.error)
+                                        : AppTheme.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(color: AppTheme.surfaceHighlight, height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildCompactMetric('ENTRY', '₹${signal.entry.toStringAsFixed(1)}'),
+                                _buildCompactMetric('TARGET', '₹${signal.target.toStringAsFixed(1)}'),
+                                _buildCompactMetric('SL', '₹${signal.stopLoss.toStringAsFixed(1)}', isSL: true),
+                                _buildCompactMetric('CONFIDENCE', '${signal.confidence}%', isConfidence: true),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCompactMetric(String label, String value, {bool isSL = false, bool isConfidence = false}) {
+    Color valColor = Colors.white;
+    if (isSL) valColor = AppTheme.error;
+    if (isConfidence) valColor = AppTheme.primary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: valColor,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -465,313 +889,5 @@ class _HomeTabViewState extends ConsumerState<HomeTabView> {
     );
   }
 
-  Widget _buildPremiumAccessCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
-      decoration: BoxDecoration(
-        color: AppTheme.secondaryBackground,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withValues(alpha: 0.03),
-            blurRadius: 20,
-            spreadRadius: 2,
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.workspace_premium_rounded, color: AppTheme.primary, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'PREMIUM ACCESS',
-                style: TextStyle(
-                  color: AppTheme.primary,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Most traders enter after the move is already gone.',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Get real-time signals, full entries, and AI guidance before the crowd.',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 12,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildPremiumFeatureRow(Icons.flash_on_rounded, 'Real-time signal entries'),
-          _buildPremiumFeatureRow(Icons.adjust_rounded, 'Full targets & stop loss levels'),
-          _buildPremiumFeatureRow(Icons.notifications_none_rounded, 'Instant push alerts'),
-          _buildPremiumFeatureRow(Icons.lock_outline_rounded, 'VIP Telegram access'),
-          const SizedBox(height: 28),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(26), // Fully rounded
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                'Unlock Pro Access',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildPremiumFeatureRow(IconData icon, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppTheme.primary, size: 18),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiGuidanceCard() {
-    final homeContent = ref.watch(homeContentProvider);
-    final List<dynamic> guidanceList = homeContent?['guidance'] ?? [
-      'Wait for the entry zone',
-      'Do not chase price after breakout',
-      'Always respect stop loss',
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppTheme.secondaryBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.psychology_rounded, color: AppTheme.primary, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'AI Guidance',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ...guidanceList.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final text = entry.value.toString();
-            return Padding(
-              padding: EdgeInsets.only(bottom: idx == guidanceList.length - 1 ? 0 : 12.0),
-              child: _buildGuidanceBullet(text),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGuidanceBullet(String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '→ ',
-          style: TextStyle(
-            color: AppTheme.primary,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 12,
-              height: 1.4,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLastSignalResultCard() {
-    final allSignals = ref.watch(signalsListProvider);
-    final closedSignals = allSignals.where((s) => s.isClosed).toList();
-    
-    String signalName = 'NIFTY 24200 CE';
-    String changeStr = '+78%';
-    String durationStr = 'in 6 minutes';
-    bool isProfit = true;
-    
-    if (closedSignals.isNotEmpty) {
-      final lastSignal = closedSignals.first;
-      signalName = '${lastSignal.symbol} ${lastSignal.strike}';
-      
-      if (lastSignal.entry > 0) {
-        final change = ((lastSignal.exitPrice ?? lastSignal.entry) - lastSignal.entry) / lastSignal.entry * 100;
-        changeStr = '${change >= 0 ? "+" : ""}${change.toStringAsFixed(1)}%';
-      }
-      durationStr = lastSignal.time;
-      if (durationStr == 'Live Now') durationStr = 'Completed';
-      isProfit = lastSignal.isProfit;
-    } else {
-      final homeContent = ref.watch(homeContentProvider);
-      if (homeContent != null && homeContent['lastSignal'] != null) {
-        signalName = 'Recent Completed Setup';
-        changeStr = '+78%';
-        durationStr = homeContent['lastSignal'].toString();
-      }
-    }
-
-    final cardBgColor = isProfit ? const Color(0xFF0C1912) : const Color(0xFF190C0C);
-    final cardBorderColor = isProfit ? const Color(0xFF1B3D2B) : const Color(0xFF3D1B1B);
-    final textColor = isProfit ? AppTheme.success : AppTheme.error;
-
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: AppTheme.secondaryBackground,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isProfit ? Icons.trending_up_rounded : Icons.trending_down_rounded, 
-                color: textColor, 
-                size: 20
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Last Signal Result',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: cardBgColor, // Dark greenish or reddish background
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorderColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  signalName,
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  changeStr,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  durationStr,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.6),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

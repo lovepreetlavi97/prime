@@ -62,7 +62,7 @@ export const initTelegramListener = async (onNewMessage) => {
       logger.info(`[Telegram] Initializing Secure Multi-Channel Pipeline...`);
 
       const config = await SystemConfig.findOne({ key: sessionKey });
-      let sessionStr = config?.value || "";
+      let sessionStr = config?.value || process.env.TELEGRAM_SESSION || "";
 
       if (process.env.TELEGRAM_SESSION?.toUpperCase() === "LOGIN") sessionStr = "";
 

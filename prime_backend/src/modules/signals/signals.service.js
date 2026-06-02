@@ -43,7 +43,10 @@ class SignalsService {
         }).lean()
       ]);
 
-      if (existing) {
+      // Only treat as duplicate if it was created within the last 5 minutes (to avoid merging separate trades on the same contract)
+      const isDuplicate = existing && (Date.now() - new Date(existing.createdAt).getTime() < 5 * 60 * 1000);
+
+      if (isDuplicate) {
         console.log(`[Signals] 🔄 Duplicate detected for ${signalData.symbol} ${signalData.strike}. Merging update.`);
         const updated = await signalsRepository.update(existing._id, {
           rawText: text,
@@ -79,6 +82,28 @@ class SignalsService {
     updateCachedSignal(saved);
     socketService.emitGlobal('new_signal', saved);
     await invalidateSignalsCache();
+
+    // Trigger push notification to all users in the background
+    (async () => {
+      try {
+        const { sendPushNotificationToAllUsers } = await import('../../services/firebase.service.js');
+        const strikeStr = saved.strike ? ` ${saved.strike}` : '';
+        const optTypeStr = saved.optionType !== 'NONE' ? ` ${saved.optionType}` : '';
+        const targetsStr = saved.targets && saved.targets.length > 0 ? `, Target: ${saved.targets.join('/')}` : '';
+        await sendPushNotificationToAllUsers({
+          title: `🚨 NEW SIGNAL: ${saved.symbol}${strikeStr}${optTypeStr}`,
+          body: `Entry: Buy above ₹${saved.entry}${targetsStr}, SL: ₹${saved.sl || saved.stopLoss}.`,
+          data: {
+            signalId: String(saved._id),
+            symbol: saved.symbol,
+            type: 'NEW_SIGNAL'
+          }
+        });
+      } catch (err) {
+        console.error('Failed to send signal push notifications:', err.message);
+      }
+    })();
+
     return saved;
   }
 
@@ -170,6 +195,35 @@ class SignalsService {
     const updated = await signalsRepository.update(id, { status, statusChangedAt: Date.now() });
     socketService.emitGlobal('signal_closed', updated);
     await invalidateSignalsCache();
+
+    // Trigger status update notification in the background
+    (async () => {
+      try {
+        const { sendPushNotificationToAllUsers } = await import('../../services/firebase.service.js');
+        let title = `✅ Target Achieved: ${updated.symbol}`;
+        let body = `Signal closed in profit at ₹${updated.exitPrice || updated.entry}.`;
+        if (status === 'SL_HIT') {
+          title = `⚠️ Stop Loss Hit: ${updated.symbol}`;
+          body = `Signal closed at SL exit: ₹${updated.exitPrice || updated.entry}.`;
+        } else if (status === 'EXIT_ALERT') {
+          title = `🚨 Exit Alert: ${updated.symbol}`;
+          body = `Exit trade now at CMP: ₹${updated.exitPrice || updated.entry}.`;
+        } else if (status === 'CLOSED_PROFIT') {
+          title = `✅ Target Achieved: ${updated.symbol}`;
+          body = `Option target achieved at ₹${updated.exitPrice || updated.entry}.`;
+        }
+        await sendPushNotificationToAllUsers({
+          title,
+          body,
+          data: {
+            signalId: String(updated._id),
+            symbol: updated.symbol,
+            type: 'SIGNAL_UPDATE'
+          }
+        });
+      } catch (e) {}
+    })();
+
     return updated;
   }
 
@@ -224,6 +278,28 @@ class SignalsService {
     });
     socketService.emitGlobal('new_signal', saved);
     await invalidateSignalsCache();
+
+    // Trigger push notification to all users in the background
+    (async () => {
+      try {
+        const { sendPushNotificationToAllUsers } = await import('../../services/firebase.service.js');
+        const strikeStr = saved.strike ? ` ${saved.strike}` : '';
+        const optTypeStr = saved.optionType !== 'NONE' ? ` ${saved.optionType}` : '';
+        const targetsStr = saved.targets && saved.targets.length > 0 ? `, Target: ${saved.targets.join('/')}` : '';
+        await sendPushNotificationToAllUsers({
+          title: `🚨 NEW MANUAL SIGNAL: ${saved.symbol}${strikeStr}${optTypeStr}`,
+          body: `Entry: Buy above ₹${saved.entry}${targetsStr}, SL: ₹${saved.sl || saved.stopLoss}.`,
+          data: {
+            signalId: String(saved._id),
+            symbol: saved.symbol,
+            type: 'NEW_SIGNAL'
+          }
+        });
+      } catch (err) {
+        console.error('Failed to send signal push notifications:', err.message);
+      }
+    })();
+
     return saved;
   }
 
