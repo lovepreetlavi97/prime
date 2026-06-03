@@ -19,10 +19,13 @@ void main() async {
 class LvxApp extends ConsumerWidget {
   const LvxApp({super.key});
 
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'LVX',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme, // We only use premium dark mode
       home: const LauncherWidget(),

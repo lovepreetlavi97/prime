@@ -18,4 +18,7 @@ export default async function (fastify, opts) {
   
   // Instagram Automation
   fastify.post('/instagram/post-top-signal', adminController.postTopSignalToInstagram);
+
+  // Push Notifications Dispatch
+  fastify.post('/dispatch-notification', adminController.dispatchNotification);
 }

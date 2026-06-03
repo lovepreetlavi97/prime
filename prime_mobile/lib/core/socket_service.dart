@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import '../main.dart';
+import 'theme.dart';
 import '../features/signals/signals_list_view.dart';
 
 final socketServiceProvider = Provider((ref) => SocketService(ref));
@@ -51,18 +55,12 @@ class SocketService {
   void init() async {
     final prefs = await SharedPreferences.getInstance();
     String savedUrl = prefs.getString('backend_url') ?? 'http://192.168.1.9:4000';
-    if (savedUrl.contains('localhost') || savedUrl.contains('10.0.2.2') || savedUrl.contains('192.168.1.15')) {
-      savedUrl = 'http://192.168.1.9:4000';
-      await prefs.setString('backend_url', savedUrl);
-    }
     ref.read(backendUrlProvider.notifier).state = savedUrl;
 
     final String? token = prefs.getString('auth_token');
     final String plan = prefs.getString('user_plan') ?? 'free';
     ref.read(userTierProvider.notifier).state = plan;
 
-    log('Initializing Socket.io connection to $savedUrl with plan $plan');
-    
     // Close existing socket if active
     socket?.disconnect();
     socket?.destroy();
@@ -77,6 +75,23 @@ class SocketService {
         'tier': plan
       })
       .build());
+
+    // Auto-healing fallback mechanism
+    Future.delayed(const Duration(seconds: 4), () async {
+      if (socket != null && !socket!.connected) {
+        log('⚠️ Connection timeout to $savedUrl. Attempting auto-healing fallback...');
+        String fallbackUrl = 'http://192.168.1.9:4000';
+        if (savedUrl.contains('192.168.1.9')) {
+          fallbackUrl = Platform.isAndroid ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
+        }
+        if (savedUrl != fallbackUrl) {
+          log('🔄 Resetting backend URL and retrying connection: $fallbackUrl');
+          await prefs.setString('backend_url', fallbackUrl);
+          ref.read(backendUrlProvider.notifier).state = fallbackUrl;
+          init(); // Retry connection
+        }
+      }
+    });
 
     socket!.onConnect((_) {
       log('✅ Flutter connected to PrimeTrade WebSocket Gateway');
@@ -132,6 +147,36 @@ class SocketService {
           ...state
         ];
       });
+
+      LvxApp.scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.radar, color: AppTheme.primary, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'NEW SIGNAL: ${newSignal.symbol}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13, fontFamily: 'Outfit'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${newSignal.strike} BUY above ₹${newSignal.entry.toStringAsFixed(1)}. Target: ₹${newSignal.target.toStringAsFixed(1)}, SL: ₹${newSignal.stopLoss.toStringAsFixed(1)}',
+                style: const TextStyle(color: Colors.white90, fontSize: 11),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.secondaryBackground,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     });
 
     socket!.on('update_signal', (data) {
@@ -172,6 +217,112 @@ class SocketService {
           ...state
         ];
       });
+
+      LvxApp.scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    closed.isProfit ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    color: closed.isProfit ? AppTheme.success : AppTheme.error,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    closed.isProfit ? 'TARGET ACHIEVED ✅' : 'STOP LOSS HIT ⚠️',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: closed.isProfit ? AppTheme.success : AppTheme.error,
+                      fontSize: 13,
+                      fontFamily: 'Outfit',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${closed.symbol} ${closed.strike} closed at ₹${(closed.exitPrice ?? closed.entry).toStringAsFixed(1)}.',
+                style: const TextStyle(color: Colors.white90, fontSize: 11),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.secondaryBackground,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    });
+
+    socket!.on('notification_broadcast', (data) {
+      log('Socket: notification_broadcast received: $data');
+      final String title = data['title'] ?? 'Alert';
+      final String body = data['body'] ?? '';
+      final String type = data['type'] ?? 'SIGNAL_ALERT';
+      
+      String icon = 'radar';
+      String iconColor = 'primary';
+      IconData displayIcon = Icons.notifications_active_rounded;
+      Color displayColor = AppTheme.primary;
+
+      if (type == 'SYSTEM_MAINT') {
+        icon = 'warning';
+        iconColor = 'warning';
+        displayIcon = Icons.warning_amber_rounded;
+        displayColor = AppTheme.warning;
+      } else if (type == 'PROMO_ALERT') {
+        icon = 'notifications_none_rounded';
+        iconColor = 'secondary';
+        displayIcon = Icons.card_giftcard_rounded;
+        displayColor = AppTheme.secondary;
+      }
+      
+      ref.read(notificationsProvider.notifier).update((state) {
+        return [
+          {
+            'title': title,
+            'desc': body,
+            'time': 'Just now',
+            'icon': icon,
+            'iconColor': iconColor,
+          },
+          ...state
+        ];
+      });
+
+      LvxApp.scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(displayIcon, color: displayColor, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13, fontFamily: 'Outfit'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                body,
+                style: const TextStyle(color: Colors.white90, fontSize: 11),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.secondaryBackground,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 6),
+        ),
+      );
     });
 
     socket!.onDisconnect((_) => log('⚠️ Socket connection closed'));
@@ -365,6 +516,58 @@ class SocketService {
       // Handle foreground messaging
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         log('🔔 [FCM] Foreground notification received: ${message.notification?.title}');
+        final notification = message.notification;
+        if (notification != null) {
+          ref.read(notificationsProvider.notifier).update((state) {
+            return [
+              {
+                'title': notification.title ?? 'Alert',
+                'desc': notification.body ?? '',
+                'time': 'Just now',
+                'icon': 'radar',
+                'iconColor': 'primary',
+              },
+              ...state
+            ];
+          });
+
+          LvxApp.scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.notifications_active_rounded, color: AppTheme.primary, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'NOTIFICATION',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13, fontFamily: 'Outfit'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.title ?? 'Alert',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12),
+                  ),
+                  if (notification.body != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      notification.body!,
+                      style: const TextStyle(color: Colors.white90, fontSize: 11),
+                    ),
+                  ],
+                ],
+              ),
+              backgroundColor: AppTheme.secondaryBackground,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
       });
     } catch (e) {
       log('❌ [FCM] Error setting up Firebase Cloud Messaging: $e');
@@ -399,29 +602,54 @@ class SocketService {
 
   // --- MAPPING HELPERS ---
   SignalData mapJsonToSignal(Map<String, dynamic> json) {
-    final List<dynamic> tgts = json['targets'] ?? [];
-    final double targetVal = tgts.isNotEmpty ? (tgts[0] as num).toDouble() : 0.0;
-    const String risk = 'Low Risk';
-    
+    double targetVal = 0.0;
+    try {
+      final List<dynamic> tgts = json['targets'] ?? [];
+      if (tgts.isNotEmpty) {
+        final rawTarget = tgts[0];
+        if (rawTarget is num) {
+          targetVal = rawTarget.toDouble();
+        } else if (rawTarget is String) {
+          targetVal = double.tryParse(rawTarget) ?? 0.0;
+        }
+      }
+    } catch (e) {
+      log('Error parsing targets: $e');
+    }
+
     final String status = json['status'] ?? 'ACTIVE';
     final bool isClosed = status.startsWith('CLOSED') || status == 'SL_HIT' || status == 'EXIT_ALERT';
     final bool isProfit = status == 'CLOSED_PROFIT' || status == 'TARGET_HIT' || status == 'PROFIT';
+
+    double tryDouble(dynamic val, double fallback) {
+      if (val == null) return fallback;
+      if (val is num) return val.toDouble();
+      if (val is String) return double.tryParse(val) ?? fallback;
+      return fallback;
+    }
+
+    int tryInt(dynamic val, int fallback) {
+      if (val == null) return fallback;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val) ?? fallback;
+      return fallback;
+    }
 
     return SignalData(
       id: json['_id'] ?? '',
       symbol: json['symbol'] ?? 'NIFTY',
       strike: '${json['strike'] ?? ''} ${json['optionType'] ?? ''}',
       type: 'BUY OPTION',
-      entry: (json['entry'] as num?)?.toDouble() ?? 0.0,
+      entry: tryDouble(json['entry'], 0.0),
       target: targetVal,
-      stopLoss: (json['sl'] as num?)?.toDouble() ?? 0.0,
-      confidence: (json['confidenceScore'] as num?)?.toInt() ?? 90,
-      riskLevel: json['rating'] ?? risk,
+      stopLoss: tryDouble(json['sl'], 0.0),
+      confidence: tryInt(json['confidenceScore'], 90),
+      riskLevel: json['rating'] ?? 'Low Risk',
       time: 'Live Now',
       reasoning: json['aiRationale'] ?? json['rawText'] ?? 'AI confirmation secured.',
       isClosed: isClosed,
       isProfit: isProfit,
-      exitPrice: (json['currentPrice'] as num?)?.toDouble() ?? (json['entry'] as num?)?.toDouble() ?? 0.0,
+      exitPrice: tryDouble(json['currentPrice'], tryDouble(json['entry'], 0.0)),
       source: json['source'] ?? 'TELEGRAM',
     );
   }

@@ -189,14 +189,21 @@ export const deleteSignalThunk = createAsyncThunk('admin/deleteSignal', async (i
 
 export const dispatchNotificationThunk = createAsyncThunk('admin/dispatchNotification', async (notifData, { dispatch, getState }) => {
   const adminName = getState().admin.adminUser?.name || 'Admin';
-  const newNotif = {
-    id: Math.random().toString(36).substring(7),
-    ...notifData,
-    status: 'DELIVERED',
-    time: 'Just now',
-  };
-  dispatch(addAuditLog(createMockAuditLog(adminName, 'BROADCAST_ALERT', `Dispatched ${notifData.type} notification to ${notifData.target}`)));
-  return newNotif;
+  try {
+    const { data } = await api.post('/admin/dispatch-notification', notifData);
+    dispatch(addAuditLog(createMockAuditLog(adminName, 'BROADCAST_ALERT', `Dispatched ${notifData.type} notification to ${notifData.target}`)));
+    return data.data;
+  } catch (e) {
+    console.error('Failed to dispatch notification via API, falling back to local simulation:', e.message);
+    const newNotif = {
+      id: Math.random().toString(36).substring(7),
+      ...notifData,
+      status: 'DELIVERED',
+      time: 'Just now',
+    };
+    dispatch(addAuditLog(createMockAuditLog(adminName, 'BROADCAST_ALERT', `Dispatched ${notifData.type} notification to ${notifData.target} (Offline Mock)`)));
+    return newNotif;
+  }
 });
 
 export const fetchHomeContent = createAsyncThunk('admin/fetchHomeContent', async () => {
